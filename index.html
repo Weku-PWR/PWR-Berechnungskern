@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b4f82">
+  <meta name="description" content="PWR Berechnungskern zur Prüfung der Stundenaufteilung">
+  <title>PWR Berechnungskern 2.0.1</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <img src="assets/pfeil-logo.jpg" alt="PFEIL Sicherung" class="logo">
+  <div>
+    <h1>PWR – Berechnungskern</h1>
+    <p>Version 2.0.1 · Berechnungsprüfung & Rechenweg</p>
+  </div>
+  <span id="onlineBadge" class="badge">Wird geladen …</span>
+</header>
+
+<main class="shell">
+  <section class="panel input-panel">
+    <h2>1. Eingabe</h2>
+    <div class="grid2">
+      <label>Datum
+        <input id="dateInput" type="date">
+      </label>
+      <label class="checkbox-row"><input id="holidayInput" type="checkbox"> Feiertag</label>
+    </div>
+    <div id="weekdayDisplay" class="weekday-display">–</div>
+
+    <div class="time-grid">
+      <fieldset>
+        <legend>Beginn</legend>
+        <div class="time-selects">
+          <select id="startHour" aria-label="Beginn Stunde"></select>
+          <span>:</span>
+          <select id="startMinute" aria-label="Beginn Minute"></select>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Ende</legend>
+        <div class="time-selects">
+          <select id="endHour" aria-label="Ende Stunde"></select>
+          <span>:</span>
+          <select id="endMinute" aria-label="Ende Minute"></select>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="rules-box">
+      <strong>Eingaberegeln</strong>
+      <ul>
+        <li>Nur 15-Minuten-Intervalle</li>
+        <li>Tag: 06:00–20:00</li>
+        <li>Nacht: 20:00–06:00</li>
+        <li>Samstag ab 17:00 = Sonn-/Feiertag</li>
+        <li>Sonntag vollständig = Sonn-/Feiertag</li>
+        <li>Feiertag gilt für die ganze Rapportzeile</li>
+        <li>Beginn = Ende ist ungültig</li>
+      </ul>
+    </div>
+
+    <div class="actions">
+      <button id="calculateBtn" class="primary">Berechnen</button>
+      <button id="resetBtn">Zurücksetzen</button>
+    </div>
+  </section>
+
+  <section class="panel result-panel">
+    <h2>2. Ergebnis</h2>
+    <div class="result-list">
+      <div><span>Wochentag Tag 06:00–20:00</span><strong id="wtDay">0.00 h</strong></div>
+      <div><span>Wochentag Nacht 20:00–06:00</span><strong id="wtNight">0.00 h</strong></div>
+      <div class="holiday"><span>Sonn-/Feiertag Tag 06:00–20:00</span><strong id="sfDay">0.00 h</strong></div>
+      <div class="holiday"><span>Sonn-/Feiertag Nacht 20:00–06:00</span><strong id="sfNight">0.00 h</strong></div>
+      <div class="total"><span>Total</span><strong id="total">0.00 h</strong></div>
+    </div>
+    <div class="meta-list">
+      <div><span>Wochentag</span><strong id="metaWeekday">–</strong></div>
+      <div><span>Feiertag</span><strong id="metaHoliday">Nein</strong></div>
+      <div><span>Über Mitternacht</span><strong id="metaOvernight">Nein</strong></div>
+      <div><span>Gültig</span><strong id="metaValid">–</strong></div>
+    </div>
+    <div id="errorBox" class="error-box" hidden></div>
+  </section>
+
+  <section class="panel detail-panel">
+    <h2>3. Rechenweg</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Von</th><th>Bis</th><th>Dauer</th><th>Kategorie</th><th>Begründung</th></tr></thead>
+        <tbody id="detailRows"><tr><td colspan="5" class="muted">Noch keine Berechnung.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="explain-box">
+      <strong>Hinweis</strong>
+      <p>Die Berechnung wird an jeder relevanten Grenze aufgeteilt: 06:00, Samstag 17:00, 20:00 und Mitternacht.</p>
+    </div>
+  </section>
+
+  <section class="panel tests-panel">
+    <div class="panel-title-row">
+      <h2>4. Prüffälle</h2>
+      <button id="runTestsBtn" class="primary">Alle Tests ausführen</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Beschreibung</th><th>Datum</th><th>Beginn</th><th>Ende</th><th>Feiertag</th><th>Erwartung</th><th>Ergebnis</th><th>Status</th></tr></thead>
+        <tbody id="testRows"></tbody>
+      </table>
+    </div>
+    <p id="testSummary" class="test-summary">Noch nicht ausgeführt.</p>
+  </section>
+
+  <section class="panel feedback-panel">
+    <h2>5. Feedback</h2>
+    <p>Für die Besprechung mit dem Niederlassungsleiter liegt im Projekt eine Datei <code>FEEDBACK.txt</code> bereit.</p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
