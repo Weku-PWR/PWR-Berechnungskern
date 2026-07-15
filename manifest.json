@@ -1,8 +1,9 @@
 {
   "name": "PWR Berechnungskern",
-  "short_name": "PWR Rechner",
-  "description": "PFEIL Wochenrapport Berechnungskern",
-  "start_url": "./",
+  "short_name": "PWR Core",
+  "description": "Fachliche Prüfung der PFEIL-Stundenberechnung",
+  "id": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#edf2f6",

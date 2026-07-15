@@ -1,28 +1,20 @@
-PWR Berechnungskern 2.0.1 – Feedback
+PWR BERECHNUNGSKERN 2.0.2 – FEEDBACK
 
 Getestet von:
 Datum:
 
-1. Stimmen die Resultate bei den eigenen Praxisbeispielen?
+Testfall / Praxisbeispiel:
+Datum:
+Beginn:
+Ende:
+Feiertag: Ja / Nein
 
+Erwartetes Ergebnis:
 
-2. Ist der detaillierte Rechenweg nachvollziehbar?
+Angezeigtes Ergebnis:
 
+Rechenweg korrekt nachvollziehbar: Ja / Nein
 
-3. Welche Testfälle fehlen?
+Bemerkung / Änderungswunsch:
 
-
-4. Welche Regel ist unklar oder falsch?
-
-
-5. Bedienung der Zeitwahl:
-
-
-Priorität des Wunsches:
-[ ] Muss
-[ ] Soll
-[ ] Kann
-
-Freigabe des Berechnungskerns:
-[ ] Ja
-[ ] Nein, weitere Änderungen nötig
+Priorität: Muss / Soll / Kann

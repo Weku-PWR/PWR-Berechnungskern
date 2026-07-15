@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b4f82">
   <meta name="description" content="PWR Berechnungskern zur Prüfung der Stundenaufteilung">
-  <title>PWR Berechnungskern 2.0.1</title>
+  <title>PWR Berechnungskern 2.0.2</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -16,7 +16,7 @@
   <img src="assets/pfeil-logo.jpg" alt="PFEIL Sicherung" class="logo">
   <div>
     <h1>PWR – Berechnungskern</h1>
-    <p>Version 2.0.1 · Berechnungsprüfung & Rechenweg</p>
+    <p>Version 2.0.2 · Berechnungsprüfung & Rechenweg</p>
   </div>
   <span id="onlineBadge" class="badge">Wird geladen …</span>
 </header>
@@ -59,6 +59,8 @@
         <li>Nacht: 20:00–06:00</li>
         <li>Samstag ab 17:00 = Sonn-/Feiertag</li>
         <li>Sonntag vollständig = Sonn-/Feiertag</li>
+        <li>Beginn am Samstag/Sonntag: Sonntagsarbeit läuft bis Montag 06:00 weiter</li>
+        <li>Beginn am Montag 00:00: Wochentag Nacht</li>
         <li>Feiertag gilt für die ganze Rapportzeile</li>
         <li>Beginn = Ende ist ungültig</li>
       </ul>
@@ -98,7 +100,7 @@
     </div>
     <div class="explain-box">
       <strong>Hinweis</strong>
-      <p>Die Berechnung wird an jeder relevanten Grenze aufgeteilt: 06:00, Samstag 17:00, 20:00 und Mitternacht.</p>
+      <p>Die Berechnung wird an jeder relevanten Grenze aufgeteilt: 06:00, Samstag 17:00, 20:00 und Mitternacht. Entscheidend ist zusätzlich der Kalendertag des Arbeitsbeginns.</p>
     </div>
   </section>
 
@@ -117,7 +119,22 @@
   </section>
 
   <section class="panel feedback-panel">
-    <h2>5. Feedback</h2>
+    <h2>5. Fachliche Zusatzangaben (vorbereitet)</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Feld</th><th>Bedeutung</th><th>Erfassung / Verwendung</th></tr></thead>
+      <tbody>
+        <tr><td>Zusatzfunktion</td><td>Zweite gleichzeitig ausgeübte Funktion, z. B. SC / SiWä</td><td>Auswahlliste im späteren Rapport</td></tr>
+        <tr><td>Tu</td><td>Tunnelzulage</td><td>Markierfeld; Mitarbeiterzulage und je nach Auftrag Kundenverrechnung</td></tr>
+        <tr><td>Fu</td><td>Sprechfunkgerät</td><td>Anzahl pro Schicht oder pro Tag</td></tr>
+        <tr><td>AW</td><td>Warngerät / Starktonhorn</td><td>Anzahl pro Schicht oder pro Tag</td></tr>
+        <tr><td>HS</td><td>Haltescheibe</td><td>Anzahl pro Schicht oder pro Tag</td></tr>
+        <tr><td>km</td><td>Dem Kunden verrechenbare Baustellenkilometer</td><td>Keine privaten Anfahrtskilometer ohne Kundenverrechnung</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="panel feedback-panel">
+    <h2>6. Feedback</h2>
     <p>Für die Besprechung mit dem Niederlassungsleiter liegt im Projekt eine Datei <code>FEEDBACK.txt</code> bereit.</p>
   </section>
 </main>
