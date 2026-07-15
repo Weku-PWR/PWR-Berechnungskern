@@ -294,6 +294,19 @@
   render();
   runTests();
   status();
+
+  const detailRowsElement = document.getElementById('detailRows');
+  const detailTable = detailRowsElement ? detailRowsElement.closest('table') : null;
+  const toggleDetailsButton = document.getElementById('toggleDetails');
+  if (toggleDetailsButton && detailTable) {
+    toggleDetailsButton.addEventListener('click', () => {
+      const hidden = detailTable.dataset.collapsed === 'true';
+      detailTable.dataset.collapsed = hidden ? 'false' : 'true';
+      detailTable.style.display = hidden ? '' : 'none';
+      toggleDetailsButton.textContent = hidden ? 'Berechnung ausblenden' : 'Berechnung anzeigen';
+    });
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
   }

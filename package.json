@@ -1,0 +1,46 @@
+{
+  "name": "pfeil-wochenrapport",
+  "version": "2.1.0",
+  "description": "PFEIL Wochenrapport - Berechnung und fachliche Prüfung",
+  "main": "main.js",
+  "author": "PFEIL Sicherung",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "ch.pfeil.wochenrapport",
+    "productName": "PFEIL Wochenrapport",
+    "asar": true,
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "manifest.json",
+      "sw.js",
+      "main.js",
+      "preload.js",
+      "assets/**/*",
+      "icons/**/*"
+    ],
+    "directories": { "output": "dist" },
+    "win": {
+      "icon": "icons/pwr.ico",
+      "target": ["nsis", "portable"],
+      "artifactName": "PFEIL-Wochenrapport-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PFEIL Wochenrapport"
+    }
+  }
+}

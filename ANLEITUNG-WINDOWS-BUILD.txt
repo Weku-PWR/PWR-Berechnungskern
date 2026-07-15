@@ -1,0 +1,19 @@
+PFEIL Wochenrapport 2.1.0 - Windows-Programm erstellen
+
+1. Den Inhalt dieses Ordners in das bestehende GitHub-Repository hochladen.
+   Wichtig: Auch den Ordner .github hochladen.
+2. Commit changes ausfuehren.
+3. Im GitHub-Repository oben auf "Actions" klicken.
+4. Links "Windows-Programm erstellen" waehlen.
+5. Falls der Build nicht automatisch laeuft: "Run workflow" anklicken.
+6. Warten, bis der Lauf ein gruenes Haekchen zeigt.
+7. Den Lauf oeffnen und unten unter "Artifacts" herunterladen:
+   PFEIL-Wochenrapport-Windows-2.1.0
+8. ZIP entpacken. Darin befinden sich:
+   - ein Windows-Setup (.exe)
+   - eine portable Windows-Version (.exe)
+
+Hinweis zu Windows SmartScreen:
+Die Programme sind noch nicht mit einem kostenpflichtigen Code-Signing-Zertifikat signiert.
+Windows kann deshalb "Windows hat den PC geschuetzt" anzeigen.
+Dann "Weitere Informationen" und "Trotzdem ausfuehren" waehlen, sofern die Datei direkt aus dem eigenen GitHub-Build stammt.
