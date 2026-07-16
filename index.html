@@ -26,8 +26,9 @@
     <h2>1. Eingabe</h2>
     <div class="grid2">
       <label id="dateField" class="field-label">Datum <span class="required-marker" aria-hidden="true">*</span><span class="sr-only"> (Pflichtfeld)</span>
-        <input id="dateInput" type="date" required aria-describedby="dateHelp">
+        <input id="dateInput" type="date" required aria-describedby="dateHelp dateError">
         <span id="dateHelp" class="field-help">Pflichtfeld</span>
+        <span id="dateError" class="field-error" hidden></span>
       </label>
       <label class="checkbox-row"><input id="holidayInput" type="checkbox"> Feiertag</label>
     </div>
@@ -37,18 +38,20 @@
       <fieldset id="startField">
         <legend>Beginn</legend>
         <div class="time-selects">
-          <select id="startHour" aria-label="Beginn Stunde"></select>
+          <select id="startHour" aria-label="Beginn Stunde" aria-describedby="startError"></select>
           <span>:</span>
-          <select id="startMinute" aria-label="Beginn Minute"></select>
+          <select id="startMinute" aria-label="Beginn Minute" aria-describedby="startError"></select>
         </div>
+        <span id="startError" class="field-error" hidden></span>
       </fieldset>
       <fieldset id="endField">
-        <legend>Ende <span id="overnightHint" class="overnight-hint" hidden>am Folgetag</span></legend>
+        <legend>Ende <span id="overnightHint" class="overnight-hint" aria-live="polite" hidden>Ende liegt am Folgetag</span></legend>
         <div class="time-selects">
-          <select id="endHour" aria-label="Ende Stunde"></select>
+          <select id="endHour" aria-label="Ende Stunde" aria-describedby="endError"></select>
           <span>:</span>
-          <select id="endMinute" aria-label="Ende Minute"></select>
+          <select id="endMinute" aria-label="Ende Minute" aria-describedby="endError"></select>
         </div>
+        <span id="endError" class="field-error" hidden></span>
       </fieldset>
     </div>
 
@@ -96,10 +99,10 @@
 
   <section class="panel detail-panel">
     <h2>3. Rechenweg</h2>
+    <div class="detail-actions"><button id="toggleDetails" class="btn secondary" type="button" aria-expanded="false" aria-controls="detailTableWrap" disabled>Rechenweg anzeigen</button></div>
     <p id="detailEmpty" class="empty-state">Der Rechenweg erscheint nach einer gültigen Berechnung.</p>
     <div id="detailContent" hidden>
-      <div class="detail-actions"><button id="toggleDetails" class="btn secondary" type="button" aria-expanded="true">Rechenweg ausblenden</button></div>
-      <div id="detailTableWrap" class="table-wrap">
+      <div id="detailTableWrap" class="table-wrap" hidden>
         <table>
           <thead><tr><th>Von</th><th>Bis</th><th>Dauer</th><th>Kategorie</th><th>Begründung</th></tr></thead>
           <tbody id="detailRows"></tbody>
