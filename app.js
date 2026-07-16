@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const minutesAllowed = [0, 15, 30, 45];
+  const { calculate, minutesAllowed, toDate } = window.PWR_CALC;
   const weekdays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   const shortWeekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   const categoryLabel = {
@@ -28,15 +28,6 @@
   fillSelect($('endMinute'), minutesAllowed, 0);
   $('dateInput').value = new Date().toISOString().slice(0, 10);
 
-  const toDate = value => {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
-  const cloneDate = date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const fmtTime = totalMinutes => {
-    const minuteOfDay = ((totalMinutes % 1440) + 1440) % 1440;
-    return `${String(Math.floor(minuteOfDay / 60)).padStart(2, '0')}:${String(minuteOfDay % 60).padStart(2, '0')}`;
-  };
   const fmtHours = minutes => `${(minutes / 60).toFixed(2)} h`;
 
   function updateWeekday() {
@@ -44,130 +35,6 @@
     const day = date.getDay();
     $('weekdayDisplay').textContent = `${shortWeekdays[day]} · ${weekdays[day]}`;
     $('weekdayDisplay').classList.toggle('weekend', day === 0 || day === 6);
-  }
-
-  function dateAtOffset(startDate, absMinute) {
-    const date = cloneDate(startDate);
-    date.setDate(date.getDate() + Math.floor(absMinute / 1440));
-    return date;
-  }
-
-  function isNightMinute(minuteOfDay) {
-    return minuteOfDay < 360 || minuteOfDay >= 1200;
-  }
-
-  function startsWeekendContinuation(input) {
-    const startDow = input.date.getDay();
-    // Samstag: Sonntagsarbeit beginnt ab 17:00 und kann bis Montag 06:00 laufen.
-    // Sonntag: bei Arbeitsbeginn am Sonntag läuft Sonntagsarbeit bis Montag 06:00 weiter.
-    return startDow === 6 || startDow === 0;
-  }
-
-  function isWeekendPremium(absMinute, input) {
-    if (input.holiday) return true;
-
-    const date = dateAtOffset(input.date, absMinute);
-    const dow = date.getDay();
-    const minuteOfDay = absMinute % 1440;
-    const startDow = input.date.getDay();
-
-    // Sonntag selbst ist immer Sonn-/Feiertagsarbeit.
-    if (dow === 0) return true;
-
-    // Samstag ab 17:00 gilt als Sonntagsarbeit.
-    if (dow === 6 && minuteOfDay >= 1020) return true;
-
-    // Montag 00:00-06:00 bleibt nur dann Sonntagsarbeit,
-    // wenn dieselbe Rapportzeile am Samstag oder Sonntag begonnen hat.
-    if (dow === 1 && minuteOfDay < 360 && startsWeekendContinuation(input)) return true;
-
-    // Beginnt die Rapportzeile am Montag, gilt ab 00:00 Wochentag Nacht.
-    if (startDow === 1) return false;
-
-    return false;
-  }
-
-  function classify(absMinute, input) {
-    const date = dateAtOffset(input.date, absMinute);
-    const dow = date.getDay();
-    const minuteOfDay = absMinute % 1440;
-    const night = isNightMinute(minuteOfDay);
-    const premium = isWeekendPremium(absMinute, input);
-
-    const category = premium
-      ? (night ? 'sfNight' : 'sfDay')
-      : (night ? 'wtNight' : 'wtDay');
-
-    let reason;
-    if (input.holiday) {
-      reason = 'Beginn-Tag manuell als Feiertag markiert; gesamte Rapportzeile gilt als Sonn-/Feiertag';
-    } else if (dow === 6 && minuteOfDay >= 1020) {
-      reason = 'Samstag ab 17:00 Uhr gilt als Sonntagsarbeit';
-    } else if (dow === 0) {
-      reason = 'Sonntag';
-    } else if (dow === 1 && minuteOfDay < 360 && startsWeekendContinuation(input)) {
-      reason = 'Arbeitsbeginn am Samstag/Sonntag; Sonntagsarbeit läuft bis Montag 06:00 Uhr weiter';
-    } else if (dow === 1 && minuteOfDay < 360) {
-      reason = 'Arbeitsbeginn am Montag; ab Montag 00:00 Uhr gilt Wochentag Nacht';
-    } else {
-      reason = 'Normaler Wochentag';
-    }
-    reason += night ? ' · Nachtzeit 20:00–06:00' : ' · Tagzeit 06:00–20:00';
-    return { category, reason };
-  }
-
-  function nextBoundary(absMinute, endAbs, input) {
-    const day = Math.floor(absMinute / 1440);
-    const minute = absMinute % 1440;
-    const date = dateAtOffset(input.date, absMinute);
-    const dow = date.getDay();
-    const candidates = [360, 1200, 1440];
-    if (dow === 6) candidates.push(1020); // Samstag 17:00
-    const future = candidates
-      .filter(value => value > minute)
-      .map(value => day * 1440 + value);
-    return Math.min(endAbs, ...(future.length ? future : [endAbs]));
-  }
-
-  function calculate(input) {
-    const start = input.startHour * 60 + input.startMinute;
-    let end = input.endHour * 60 + input.endMinute;
-
-    if (!minutesAllowed.includes(input.startMinute) || !minutesAllowed.includes(input.endMinute)) {
-      return { valid: false, error: 'Es sind nur 15-Minuten-Intervalle zulässig.' };
-    }
-    if (start === end) {
-      return { valid: false, error: 'Beginn und Ende dürfen nicht identisch sein.' };
-    }
-
-    const overnight = end < start;
-    if (overnight) end += 1440;
-
-    const result = {
-      valid: true,
-      overnight,
-      totals: { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 0 },
-      segments: []
-    };
-
-    let cursor = start;
-    while (cursor < end) {
-      const boundary = nextBoundary(cursor, end, input);
-      const classification = classify(cursor, input);
-      const duration = boundary - cursor;
-      result.totals[classification.category] += duration;
-      result.segments.push({
-        from: fmtTime(cursor),
-        to: boundary % 1440 === 0 ? '24:00' : fmtTime(boundary),
-        duration,
-        category: classification.category,
-        reason: classification.reason
-      });
-      cursor = boundary;
-    }
-
-    result.total = Object.values(result.totals).reduce((sum, value) => sum + value, 0);
-    return result;
   }
 
   function currentInput() {
@@ -225,7 +92,7 @@
     { id: 'TC-006', desc: 'Sonntag 20 bis Montag 07', date: '2026-07-19', start: '20:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 0, sfDay: 0, sfNight: 600 } },
     { id: 'TC-007', desc: 'Sonntag 23:45 bis Montag 06', date: '2026-07-19', start: '23:45', end: '06:00', holiday: false, expect: { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 375 } },
     { id: 'TC-008', desc: 'Montag 00 bis 07', date: '2026-07-20', start: '00:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 360, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-009', desc: 'Samstag 16 bis Montag 07', date: '2026-07-18', start: '16:00', end: '07:00', holiday: false, expect: { wtDay: 120, wtNight: 0, sfDay: 180, sfNight: 600 } },
+    { id: 'TC-009', desc: 'Samstag 16 bis Sonntag 07', date: '2026-07-18', start: '16:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 0, sfDay: 240, sfNight: 600 } },
     { id: 'TC-010', desc: 'Freitag 22 bis Samstag 06', date: '2026-07-17', start: '22:00', end: '06:00', holiday: false, expect: { wtDay: 0, wtNight: 480, sfDay: 0, sfNight: 0 } },
     { id: 'TC-011', desc: 'Feiertag über Mitternacht', date: '2026-07-14', start: '18:00', end: '07:00', holiday: true, expect: { wtDay: 0, wtNight: 0, sfDay: 180, sfNight: 600 } },
     { id: 'TC-012', desc: 'Wochentag über Mitternacht', date: '2026-07-14', start: '18:30', end: '07:15', holiday: false, expect: { wtDay: 165, wtNight: 600, sfDay: 0, sfNight: 0 } },
@@ -311,6 +178,4 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
   }
 
-  // Für automatisierte lokale Prüfungen verfügbar, ohne die Bedienoberfläche zu beeinflussen.
-  window.PWR_CALC = { calculate, toDate };
 })();

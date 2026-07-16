@@ -1,4 +1,4 @@
-PFEIL Wochenrapport 2.1.0 - Windows-Programm erstellen
+PFEIL Wochenrapport 2.1.1 - Windows-Programm erstellen
 
 1. Den Inhalt dieses Ordners in das bestehende GitHub-Repository hochladen.
    Wichtig: Auch den Ordner .github hochladen.
@@ -8,7 +8,7 @@ PFEIL Wochenrapport 2.1.0 - Windows-Programm erstellen
 5. Falls der Build nicht automatisch laeuft: "Run workflow" anklicken.
 6. Warten, bis der Lauf ein gruenes Haekchen zeigt.
 7. Den Lauf oeffnen und unten unter "Artifacts" herunterladen:
-   PFEIL-Wochenrapport-Windows-2.1.0
+   PFEIL-Wochenrapport-Windows-2.1.1
 8. ZIP entpacken. Darin befinden sich:
    - ein Windows-Setup (.exe)
    - eine portable Windows-Version (.exe)

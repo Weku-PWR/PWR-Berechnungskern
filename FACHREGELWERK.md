@@ -1,4 +1,4 @@
-# PWR Fachregelwerk – Version 1.0 (Stand 2.0.2)
+# PWR Fachregelwerk – Version 2.1.1
 
 ## Arbeitszeit
 
@@ -14,6 +14,10 @@
 - BR-010: Ein manuell markierter Feiertag gilt für die gesamte Rapportzeile, auch über Mitternacht.
 - BR-011: Samstag und Sonntag werden nur in der Anzeige des Wochentags rot dargestellt.
 - BR-012: Pausen werden als getrennte Rapportzeilen erfasst.
+- BR-013: Eine Rapportzeile beschreibt genau eine Arbeitsschicht.
+- BR-014: Eine Rapportzeile darf höchstens einen Tageswechsel enthalten.
+- BR-015: Die technische Dauer einer Rapportzeile beträgt weniger als 24 Stunden.
+- BR-016: Mehrtägige Einsätze werden durch mehrere Rapportzeilen erfasst. Version 2.1.1 unterstützt keine mehrtägigen Rapportzeilen; eine spätere Version 2.2 kann mehrere Kalendertage unterstützen.
 
 ## Zusatzleistungen
 

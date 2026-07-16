@@ -1,4 +1,4 @@
-# PFEIL Wochenrapport 2.1.0
+# PFEIL Wochenrapport 2.1.1
 
 Dieses Repository erzeugt über GitHub Actions ein installierbares Windows-Programm und eine portable EXE.
 
