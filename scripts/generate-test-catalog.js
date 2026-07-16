@@ -16,6 +16,42 @@ function escapeCell(value) {
   return value.replaceAll('|', '\\|').replaceAll('\n', ' ');
 }
 
+const totalLabels = {
+  wtDay: 'WT Tag',
+  wtNight: 'WT Nacht',
+  sfDay: 'So/FT Tag',
+  sfNight: 'So/FT Nacht'
+};
+
+function formatExpectation(testCase) {
+  const { expected } = testCase;
+
+  switch (testCase.kind) {
+    case 'calculation':
+      return Object.entries(expected.totals)
+        .filter(([, minutes]) => minutes !== 0)
+        .map(([category, minutes]) => `${(minutes / 60).toFixed(2)} ${totalLabels[category]}`)
+        .join(' + ');
+
+    case 'invalid-calendar-date':
+      return `Datumsumwandlung liefert ${expected.dateIsInvalid ? 'Invalid Date' : 'ein gültiges Datum'}; `
+        + `Berechnung ist ${expected.valid ? 'gültig' : 'ungültig'}`;
+
+    case 'termination':
+      return `Prozess terminiert innerhalb ${expected.completesWithinMs / 1000} s und bestätigt die `
+        + `${expected.valid ? 'gültige' : 'ungültige'} Eingabe`;
+
+    case 'invalid-input':
+      return testCase.group === 'Fachtests'
+        ? (expected.valid ? 'gültig' : 'ungültig')
+        : `Eingabe ${expected.valid ? 'gültig' : 'ungültig'}; `
+          + `${expected.segments === undefined ? 'keine Segmente' : 'Segmente vorhanden'}`;
+
+    default:
+      throw new Error(`Unbekannte Testfallart: ${testCase.kind}`);
+  }
+}
+
 function renderCatalog() {
   const lines = [
     '# PWR Testkatalog 2.1.1',
@@ -30,7 +66,8 @@ function renderCatalog() {
   for (const group of groups) {
     lines.push(`## ${group}`, '', '| ID | Fall | Erwartung |', '|---|---|---|');
     for (const testCase of testCases.filter(item => item.group === group)) {
-      lines.push(`| ${escapeCell(testCase.id)} | ${escapeCell(testCase.description)} | ${escapeCell(testCase.expectation)} |`);
+      const expectation = formatExpectation(testCase);
+      lines.push(`| ${escapeCell(testCase.id)} | ${escapeCell(testCase.description)} | ${escapeCell(expectation)} |`);
     }
     lines.push('');
   }

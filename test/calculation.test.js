@@ -23,10 +23,15 @@ function defaultInput(overrides = {}) {
   };
 }
 
-function assertInvalid(overrides) {
+function assertExpectedResult(result, expected) {
+  assert.equal(result.valid, expected.valid);
+  if (Object.hasOwn(expected, 'segments')) assert.equal(result.segments, expected.segments);
+  if (Object.hasOwn(expected, 'totals')) assert.deepEqual(result.totals, expected.totals);
+}
+
+function assertInvalid(overrides, expected) {
   const result = calculate(defaultInput(overrides));
-  assert.equal(result.valid, false);
-  assert.equal(result.segments, undefined);
+  assertExpectedResult(result, expected);
 }
 
 function timeParts(value) {
@@ -36,13 +41,13 @@ function timeParts(value) {
 async function runTestCase(testCase) {
   switch (testCase.kind) {
     case 'invalid-input':
-      for (const scenario of testCase.scenarios) assertInvalid(scenario);
+      for (const scenario of testCase.scenarios) assertInvalid(scenario, testCase.expected);
       return;
 
     case 'invalid-calendar-date': {
       const date = toDate(testCase.date);
-      assert.equal(Number.isNaN(date.getTime()), true);
-      assertInvalid({ date });
+      assert.equal(Number.isNaN(date.getTime()), testCase.expected.dateIsInvalid);
+      assertInvalid({ date }, testCase.expected);
       return;
     }
 
@@ -53,10 +58,21 @@ async function runTestCase(testCase) {
         const { calculate, toDate } = require(${JSON.stringify(calculationPath)});
         const input = ${JSON.stringify(input)};
         input.date = toDate(${JSON.stringify(testCase.input.date)});
-        if (calculate(input).valid !== false) process.exit(1);
+        if (calculate(input).valid !== ${JSON.stringify(testCase.expected.valid)}) process.exit(1);
       `;
 
-      await execFileAsync(process.execPath, ['-e', script], { timeout: testCase.timeout });
+      let exitCode = 0;
+      let signal;
+      try {
+        await execFileAsync(process.execPath, ['-e', script], {
+          timeout: testCase.expected.completesWithinMs
+        });
+      } catch (error) {
+        exitCode = error.code;
+        signal = error.signal;
+      }
+      assert.equal(signal, undefined);
+      assert.equal(exitCode, testCase.expected.exitCode);
       return;
     }
 
@@ -72,8 +88,7 @@ async function runTestCase(testCase) {
         endMinute
       });
 
-      assert.equal(result.valid, true);
-      assert.deepEqual(result.totals, testCase.expected);
+      assertExpectedResult(result, testCase.expected);
       return;
     }
 
