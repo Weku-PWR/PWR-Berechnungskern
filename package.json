@@ -8,7 +8,11 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node --test",
+    "test": "node scripts/generate-test-catalog.js --check && node --test test/calculation.test.js",
+    "test:catalog": "node scripts/generate-test-catalog.js",
+    "syntax": "node scripts/check-syntax.js",
+    "verify": "npm run syntax && npm test",
+    "predist:win": "npm run verify",
     "dist:win": "electron-builder --win nsis portable"
   },
   "devDependencies": {
