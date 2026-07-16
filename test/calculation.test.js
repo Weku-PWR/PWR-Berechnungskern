@@ -7,103 +7,96 @@ const { promisify } = require('node:util');
 const test = require('node:test');
 
 const { calculate, toDate } = require('../calculation.js');
+const { defaultInput, testCases } = require('./test-cases.js');
+
 const execFileAsync = promisify(execFile);
 
-function input(overrides = {}) {
+function materializeInput(input) {
   return {
-    date: toDate('2026-07-13'),
-    holiday: false,
-    startHour: 6,
-    startMinute: 0,
-    endHour: 14,
-    endMinute: 0,
-    ...overrides
+    ...input,
+    date: typeof input.date === 'string' ? toDate(input.date) : input.date
   };
 }
 
-function assertInvalid(overrides) {
-  const result = calculate(input(overrides));
-  assert.equal(result.valid, false);
-  assert.equal(result.segments, undefined);
+function assertExpectedResult(result, expected) {
+  assert.equal(result.valid, expected.valid);
+  if (Object.hasOwn(expected, 'error')) assert.equal(result.error, expected.error);
+  if (Object.hasOwn(expected, 'overnight')) assert.equal(result.overnight, expected.overnight);
+  if (Object.hasOwn(expected, 'totals')) assert.deepEqual(result.totals, expected.totals);
+  if (Object.hasOwn(expected, 'total')) assert.equal(result.total, expected.total);
+  if (Object.hasOwn(expected, 'segments')) assert.deepEqual(result.segments, expected.segments);
 }
 
-test('negative Stunden werden abgelehnt', () => {
-  assertInvalid({ startHour: -1 });
-});
-
-test('Stunde 24 wird abgelehnt', () => {
-  assertInvalid({ endHour: 24 });
-});
-
-test('gebrochene und nichtnumerische Stunden werden abgelehnt', () => {
-  assertInvalid({ startHour: 6.5 });
-  assertInvalid({ startHour: '6' });
-  assertInvalid({ endHour: Number.NaN });
-});
-
-test('fehlendes und ungültiges Datum werden abgelehnt', () => {
-  assertInvalid({ date: undefined });
-  assertInvalid({ date: new Date(Number.NaN) });
-});
-
-test('nicht existierendes Kalenderdatum wird abgelehnt', () => {
-  const date = toDate('2026-02-30');
-  assert.equal(Number.isNaN(date.getTime()), true);
-  assertInvalid({ date });
-});
-
-test('ungültige, gebrochene und nichtnumerische Minuten werden abgelehnt', () => {
-  assertInvalid({ startMinute: 5 });
-  assertInvalid({ startMinute: 15.5 });
-  assertInvalid({ startMinute: '15' });
-});
-
-test('Beginn gleich Ende wird abgelehnt', () => {
-  assertInvalid({ endHour: 6 });
-});
-
-test('ungültige Eingaben terminieren garantiert', async () => {
-  const calculationPath = path.resolve(__dirname, '..', 'calculation.js');
-  const script = `
-    const { calculate, toDate } = require(${JSON.stringify(calculationPath)});
-    const result = calculate({
-      date: toDate('2026-07-13'), holiday: false,
-      startHour: -1, startMinute: 0, endHour: 1, endMinute: 0
-    });
-    if (result.valid !== false) process.exit(1);
-  `;
-
-  await execFileAsync(process.execPath, ['-e', script], { timeout: 1000 });
-});
-
-const fachtests = [
-  ['TC-001', '2026-07-13', '06:00', '14:00', false, { wtDay: 480, wtNight: 0, sfDay: 0, sfNight: 0 }],
-  ['TC-002', '2026-07-13', '18:00', '22:00', false, { wtDay: 120, wtNight: 120, sfDay: 0, sfNight: 0 }],
-  ['TC-003', '2026-07-18', '14:00', '22:00', false, { wtDay: 180, wtNight: 0, sfDay: 180, sfNight: 120 }],
-  ['TC-004', '2026-07-18', '22:00', '06:00', false, { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 480 }],
-  ['TC-005', '2026-07-19', '08:00', '16:00', false, { wtDay: 0, wtNight: 0, sfDay: 480, sfNight: 0 }],
-  ['TC-006', '2026-07-19', '20:00', '07:00', false, { wtDay: 60, wtNight: 0, sfDay: 0, sfNight: 600 }],
-  ['TC-007', '2026-07-19', '23:45', '06:00', false, { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 375 }],
-  ['TC-008', '2026-07-20', '00:00', '07:00', false, { wtDay: 60, wtNight: 360, sfDay: 0, sfNight: 0 }],
-  ['TC-009', '2026-07-18', '16:00', '07:00', false, { wtDay: 60, wtNight: 0, sfDay: 240, sfNight: 600 }],
-  ['TC-010', '2026-07-17', '22:00', '06:00', false, { wtDay: 0, wtNight: 480, sfDay: 0, sfNight: 0 }],
-  ['TC-011', '2026-07-14', '18:00', '07:00', true, { wtDay: 0, wtNight: 0, sfDay: 180, sfNight: 600 }],
-  ['TC-012', '2026-07-14', '18:30', '07:15', false, { wtDay: 165, wtNight: 600, sfDay: 0, sfNight: 0 }]
-];
-
-for (const [id, date, start, end, holiday, expected] of fachtests) {
-  test(`${id} erfüllt das Fachregelwerk`, () => {
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const [endHour, endMinute] = end.split(':').map(Number);
-    const result = calculate({
-      date: toDate(date), holiday, startHour, startMinute, endHour, endMinute
-    });
-
-    assert.equal(result.valid, true);
-    assert.deepEqual(result.totals, expected);
-  });
+function assertInvalid(overrides, expected) {
+  const result = calculate(materializeInput({ ...defaultInput, ...overrides }));
+  assertExpectedResult(result, expected);
 }
 
-test('TC-013 lehnt identische Zeiten ab', () => {
-  assertInvalid({ startHour: 6, endHour: 6 });
-});
+function timeParts(value) {
+  return value.split(':').map(Number);
+}
+
+async function runTestCase(testCase) {
+  switch (testCase.kind) {
+    case 'invalid-input':
+      for (const scenario of testCase.scenarios) assertInvalid(scenario, testCase.expected);
+      return;
+
+    case 'invalid-calendar-date': {
+      const date = toDate(testCase.date);
+      assert.equal(Number.isNaN(date.getTime()), testCase.expected.dateIsInvalid);
+      assertInvalid({ date }, testCase.expected);
+      return;
+    }
+
+    case 'termination': {
+      const calculationPath = path.resolve(__dirname, '..', 'calculation.js');
+      const input = { ...testCase.input, date: null };
+      const script = `
+        const { calculate, toDate } = require(${JSON.stringify(calculationPath)});
+        const input = ${JSON.stringify(input)};
+        input.date = toDate(${JSON.stringify(testCase.input.date)});
+        const result = calculate(input);
+        if (result.valid !== ${JSON.stringify(testCase.expected.valid)}) process.exit(1);
+        if (result.error !== ${JSON.stringify(testCase.expected.error)}) process.exit(2);
+      `;
+
+      let exitCode = 0;
+      let signal;
+      try {
+        await execFileAsync(process.execPath, ['-e', script], {
+          timeout: testCase.expected.completesWithinMs
+        });
+      } catch (error) {
+        exitCode = error.code;
+        signal = error.signal;
+      }
+      assert.equal(signal, undefined);
+      assert.equal(exitCode, testCase.expected.exitCode);
+      return;
+    }
+
+    case 'calculation': {
+      const [startHour, startMinute] = timeParts(testCase.start);
+      const [endHour, endMinute] = timeParts(testCase.end);
+      const result = calculate({
+        date: toDate(testCase.date),
+        holiday: testCase.holiday,
+        startHour,
+        startMinute,
+        endHour,
+        endMinute
+      });
+
+      assertExpectedResult(result, testCase.expected);
+      return;
+    }
+
+    default:
+      throw new Error(`Unbekannte Testfallart: ${testCase.kind}`);
+  }
+}
+
+for (const testCase of testCases) {
+  test(`${testCase.id} ${testCase.title}`, () => runTestCase(testCase));
+}
