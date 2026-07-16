@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { testCases } = require('../test/test-cases.js');
+const { defaultInput, testCases } = require('../test/test-cases.js');
 
 const projectRoot = path.resolve(__dirname, '..');
 const catalogPath = path.join(projectRoot, 'TESTKATALOG.md');
@@ -16,37 +16,44 @@ function escapeCell(value) {
   return value.replaceAll('|', '\\|').replaceAll('\n', ' ');
 }
 
-const totalLabels = {
-  wtDay: 'WT Tag',
-  wtNight: 'WT Nacht',
-  sfDay: 'So/FT Tag',
-  sfNight: 'So/FT Nacht'
-};
+function canonicalize(value) {
+  if (value === undefined) return { $type: 'undefined' };
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    return { $type: 'number', value: String(value) };
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? { $type: 'date', value: 'Invalid Date' }
+      : { $type: 'date', value: value.toISOString() };
+  }
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value).sort().map(key => [key, canonicalize(value[key])])
+    );
+  }
+  return value;
+}
 
-function formatExpectation(testCase) {
-  const { expected } = testCase;
+function canonicalJson(value, spacing = 0) {
+  return JSON.stringify(canonicalize(value), null, spacing);
+}
 
+function executableInputs(testCase) {
   switch (testCase.kind) {
     case 'calculation':
-      return Object.entries(expected.totals)
-        .filter(([, minutes]) => minutes !== 0)
-        .map(([category, minutes]) => `${(minutes / 60).toFixed(2)} ${totalLabels[category]}`)
-        .join(' + ');
-
-    case 'invalid-calendar-date':
-      return `Datumsumwandlung liefert ${expected.dateIsInvalid ? 'Invalid Date' : 'ein gültiges Datum'}; `
-        + `Berechnung ist ${expected.valid ? 'gültig' : 'ungültig'}`;
-
-    case 'termination':
-      return `Prozess terminiert innerhalb ${expected.completesWithinMs / 1000} s und bestätigt die `
-        + `${expected.valid ? 'gültige' : 'ungültige'} Eingabe`;
-
+      return {
+        date: testCase.date,
+        holiday: testCase.holiday,
+        start: testCase.start,
+        end: testCase.end
+      };
     case 'invalid-input':
-      return testCase.group === 'Fachtests'
-        ? (expected.valid ? 'gültig' : 'ungültig')
-        : `Eingabe ${expected.valid ? 'gültig' : 'ungültig'}; `
-          + `${expected.segments === undefined ? 'keine Segmente' : 'Segmente vorhanden'}`;
-
+      return { defaultInput, scenarios: testCase.scenarios };
+    case 'invalid-calendar-date':
+      return { defaultInput, date: testCase.date };
+    case 'termination':
+      return testCase.input;
     default:
       throw new Error(`Unbekannte Testfallart: ${testCase.kind}`);
   }
@@ -64,13 +71,26 @@ function renderCatalog() {
 
   const groups = [...new Set(testCases.map(testCase => testCase.group))];
   for (const group of groups) {
-    lines.push(`## ${group}`, '', '| ID | Fall | Erwartung |', '|---|---|---|');
+    lines.push(`## ${group}`, '', '| ID | Fall | Eingaben (verlustfrei) | Erwartung (verlustfrei) |', '|---|---|---|---|');
     for (const testCase of testCases.filter(item => item.group === group)) {
-      const expectation = formatExpectation(testCase);
-      lines.push(`| ${escapeCell(testCase.id)} | ${escapeCell(testCase.description)} | ${escapeCell(expectation)} |`);
+      lines.push(`| ${escapeCell(testCase.id)} | ${escapeCell(testCase.description)} | `
+        + `${escapeCell(canonicalJson(executableInputs(testCase)))} | `
+        + `${escapeCell(canonicalJson(testCase.expected))} |`);
     }
     lines.push('');
   }
+
+  lines.push(
+    '## Maschinenlesbare kanonische Definition',
+    '',
+    'Die folgende Darstellung enthält die vollständigen ausführbaren Eingaben und Sollwerte. '
+      + 'Sonderwerte wie `undefined`, `NaN` und ungültige Datumswerte sind typmarkiert.',
+    '',
+    '```json',
+    canonicalJson({ defaultInput, testCases }, 2),
+    '```',
+    ''
+  );
 
   return lines.join('\n');
 }

@@ -7,30 +7,28 @@ const { promisify } = require('node:util');
 const test = require('node:test');
 
 const { calculate, toDate } = require('../calculation.js');
-const { testCases } = require('./test-cases.js');
+const { defaultInput, testCases } = require('./test-cases.js');
 
 const execFileAsync = promisify(execFile);
 
-function defaultInput(overrides = {}) {
+function materializeInput(input) {
   return {
-    date: toDate('2026-07-13'),
-    holiday: false,
-    startHour: 6,
-    startMinute: 0,
-    endHour: 14,
-    endMinute: 0,
-    ...overrides
+    ...input,
+    date: typeof input.date === 'string' ? toDate(input.date) : input.date
   };
 }
 
 function assertExpectedResult(result, expected) {
   assert.equal(result.valid, expected.valid);
-  if (Object.hasOwn(expected, 'segments')) assert.equal(result.segments, expected.segments);
+  if (Object.hasOwn(expected, 'error')) assert.equal(result.error, expected.error);
+  if (Object.hasOwn(expected, 'overnight')) assert.equal(result.overnight, expected.overnight);
   if (Object.hasOwn(expected, 'totals')) assert.deepEqual(result.totals, expected.totals);
+  if (Object.hasOwn(expected, 'total')) assert.equal(result.total, expected.total);
+  if (Object.hasOwn(expected, 'segments')) assert.deepEqual(result.segments, expected.segments);
 }
 
 function assertInvalid(overrides, expected) {
-  const result = calculate(defaultInput(overrides));
+  const result = calculate(materializeInput({ ...defaultInput, ...overrides }));
   assertExpectedResult(result, expected);
 }
 
@@ -58,7 +56,9 @@ async function runTestCase(testCase) {
         const { calculate, toDate } = require(${JSON.stringify(calculationPath)});
         const input = ${JSON.stringify(input)};
         input.date = toDate(${JSON.stringify(testCase.input.date)});
-        if (calculate(input).valid !== ${JSON.stringify(testCase.expected.valid)}) process.exit(1);
+        const result = calculate(input);
+        if (result.valid !== ${JSON.stringify(testCase.expected.valid)}) process.exit(1);
+        if (result.error !== ${JSON.stringify(testCase.expected.error)}) process.exit(2);
       `;
 
       let exitCode = 0;

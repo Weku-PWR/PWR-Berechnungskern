@@ -2,6 +2,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const { calculate, minutesAllowed, toDate } = window.PWR_CALC;
+  const { defaultInput, testCases } = window.PWR_TEST_CASES;
   const weekdays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   const shortWeekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   const categoryLabel = {
@@ -176,58 +177,107 @@
       </tr>`).join('');
   }
 
-  const tests = [
-    { id: 'TC-001', desc: 'Montag normale Tagarbeit', date: '2026-07-13', start: '06:00', end: '14:00', holiday: false, expect: { wtDay: 480, wtNight: 0, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-002', desc: 'Montag Tag zu Nacht', date: '2026-07-13', start: '18:00', end: '22:00', holiday: false, expect: { wtDay: 120, wtNight: 120, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-003', desc: 'Samstag vor und nach 17 Uhr', date: '2026-07-18', start: '14:00', end: '22:00', holiday: false, expect: { wtDay: 180, wtNight: 0, sfDay: 180, sfNight: 120 } },
-    { id: 'TC-004', desc: 'Samstag 22 bis Sonntag 06', date: '2026-07-18', start: '22:00', end: '06:00', holiday: false, expect: { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 480 } },
-    { id: 'TC-005', desc: 'Sonntag Tagarbeit', date: '2026-07-19', start: '08:00', end: '16:00', holiday: false, expect: { wtDay: 0, wtNight: 0, sfDay: 480, sfNight: 0 } },
-    { id: 'TC-006', desc: 'Sonntag 20 bis Montag 07', date: '2026-07-19', start: '20:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 0, sfDay: 0, sfNight: 600 } },
-    { id: 'TC-007', desc: 'Sonntag 23:45 bis Montag 06', date: '2026-07-19', start: '23:45', end: '06:00', holiday: false, expect: { wtDay: 0, wtNight: 0, sfDay: 0, sfNight: 375 } },
-    { id: 'TC-008', desc: 'Montag 00 bis 07', date: '2026-07-20', start: '00:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 360, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-009', desc: 'Samstag 16 bis Sonntag 07', date: '2026-07-18', start: '16:00', end: '07:00', holiday: false, expect: { wtDay: 60, wtNight: 0, sfDay: 240, sfNight: 600 } },
-    { id: 'TC-010', desc: 'Freitag 22 bis Samstag 06', date: '2026-07-17', start: '22:00', end: '06:00', holiday: false, expect: { wtDay: 0, wtNight: 480, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-011', desc: 'Feiertag über Mitternacht', date: '2026-07-14', start: '18:00', end: '07:00', holiday: true, expect: { wtDay: 0, wtNight: 0, sfDay: 180, sfNight: 600 } },
-    { id: 'TC-012', desc: 'Wochentag über Mitternacht', date: '2026-07-14', start: '18:30', end: '07:15', holiday: false, expect: { wtDay: 165, wtNight: 600, sfDay: 0, sfNight: 0 } },
-    { id: 'TC-013', desc: 'Ungültig gleiche Zeit', date: '2026-07-14', start: '06:00', end: '06:00', holiday: false, invalid: true }
-  ];
-
   function parseTime(value) {
     const [hour, minute] = value.split(':').map(Number);
     return { hour, minute };
   }
 
+  function materializeTestInput(input) {
+    return {
+      ...input,
+      date: typeof input.date === 'string' ? toDate(input.date) : input.date
+    };
+  }
+
+  function executeVisibleTest(testCase) {
+    switch (testCase.kind) {
+      case 'invalid-input':
+        return testCase.scenarios.map(scenario =>
+          calculate(materializeTestInput({ ...defaultInput, ...scenario })));
+
+      case 'invalid-calendar-date': {
+        const date = toDate(testCase.date);
+        return [{
+          ...calculate(materializeTestInput({ ...defaultInput, date })),
+          dateIsInvalid: Number.isNaN(date.getTime())
+        }];
+      }
+
+      case 'termination': {
+        const startedAt = performance.now();
+        const result = calculate(materializeTestInput(testCase.input));
+        return [{ ...result, exitCode: 0, elapsedMs: performance.now() - startedAt }];
+      }
+
+      case 'calculation': {
+        const start = parseTime(testCase.start);
+        const end = parseTime(testCase.end);
+        return [calculate({
+          date: toDate(testCase.date),
+          holiday: testCase.holiday,
+          startHour: start.hour,
+          startMinute: start.minute,
+          endHour: end.hour,
+          endMinute: end.minute
+        })];
+      }
+
+      default:
+        throw new Error(`Unbekannte Testfallart: ${testCase.kind}`);
+    }
+  }
+
+  function matchesExpected(actual, expected) {
+    return Object.entries(expected).every(([key, expectedValue]) => {
+      if (key === 'completesWithinMs') return actual.elapsedMs <= expectedValue;
+      const actualValue = actual[key];
+      if (Array.isArray(expectedValue)) {
+        return Array.isArray(actualValue)
+          && actualValue.length === expectedValue.length
+          && expectedValue.every((item, index) => matchesExpected(actualValue[index], item));
+      }
+      if (expectedValue && typeof expectedValue === 'object') {
+        return actualValue && typeof actualValue === 'object'
+          && matchesExpected(actualValue, expectedValue);
+      }
+      return Object.is(actualValue, expectedValue);
+    });
+  }
+
+  function resultText(value) {
+    if (!value.valid) return `ungültig · ${value.error}`;
+    const totals = Object.entries(value.totals || {})
+      .map(([key, minutes]) => `${categoryLabel[key]} ${minutes} min`)
+      .join(' / ');
+    return `${totals} · Total ${value.total} min · Folgetag ${value.overnight ? 'Ja' : 'Nein'}`;
+  }
+
+  function testColumns(testCase) {
+    if (testCase.kind === 'calculation') {
+      return [testCase.date, testCase.start, testCase.end, testCase.holiday ? 'Ja' : 'Nein'];
+    }
+    const input = testCase.kind === 'termination' ? testCase.input : defaultInput;
+    const start = `${String(input.startHour).padStart(2, '0')}:${String(input.startMinute).padStart(2, '0')}`;
+    const end = `${String(input.endHour).padStart(2, '0')}:${String(input.endMinute).padStart(2, '0')}`;
+    return [String(input.date), start, end, input.holiday ? 'Ja' : 'Nein'];
+  }
+
   function runTests() {
     let passed = 0;
-    $('testRows').innerHTML = tests.map(test => {
-      const start = parseTime(test.start);
-      const end = parseTime(test.end);
-      const result = calculate({
-        date: toDate(test.date),
-        holiday: test.holiday,
-        startHour: start.hour,
-        startMinute: start.minute,
-        endHour: end.hour,
-        endMinute: end.minute
-      });
-
-      const pass = test.invalid
-        ? !result.valid
-        : result.valid && Object.keys(test.expect).every(key => result.totals[key] === test.expect[key]);
+    $('testRows').innerHTML = testCases.map(testCase => {
+      const results = executeVisibleTest(testCase);
+      const pass = results.every(result => matchesExpected(result, testCase.expected));
       if (pass) passed += 1;
 
-      const expected = test.invalid
-        ? 'ungültig'
-        : Object.entries(test.expect).filter(([, value]) => value).map(([key, value]) => `${categoryLabel[key]} ${fmtHours(value)}`).join(' / ');
-      const actual = !result.valid
-        ? 'ungültig'
-        : Object.entries(result.totals).filter(([, value]) => value).map(([key, value]) => `${categoryLabel[key]} ${fmtHours(value)}`).join(' / ');
+      const [date, start, end, holiday] = testColumns(testCase);
+      const expected = resultText(testCase.expected);
+      const actual = results.map(resultText).join(' | ');
 
-      return `<tr><td>${test.id}</td><td>${test.desc}</td><td>${test.date}</td><td>${test.start}</td><td>${test.end}</td><td>${test.holiday ? 'Ja' : 'Nein'}</td><td>${expected}</td><td>${actual}</td><td class="${pass ? 'status-ok' : 'status-fail'}">${pass ? 'OK' : 'FEHLER'}</td></tr>`;
+      return `<tr><td>${testCase.id}</td><td>${testCase.description}</td><td>${date}</td><td>${start}</td><td>${end}</td><td>${holiday}</td><td>${expected}</td><td>${actual}</td><td class="${pass ? 'status-ok' : 'status-fail'}">${pass ? 'OK' : 'FEHLER'}</td></tr>`;
     }).join('');
 
-    $('testSummary').textContent = `${passed} von ${tests.length} Testfällen korrekt.`;
-    $('testSummary').className = `test-summary ${passed === tests.length ? 'status-ok' : 'status-fail'}`;
+    $('testSummary').textContent = `${passed} von ${testCases.length} Testfällen korrekt.`;
+    $('testSummary').className = `test-summary ${passed === testCases.length ? 'status-ok' : 'status-fail'}`;
   }
 
   $('calculateBtn').addEventListener('click', render);

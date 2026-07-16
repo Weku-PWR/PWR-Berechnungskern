@@ -27,6 +27,7 @@
       "index.html",
       "styles.css",
       "calculation.js",
+      "test/test-cases.js",
       "app.js",
       "manifest.json",
       "sw.js",
