@@ -59,7 +59,7 @@ Prüflauf gegen die erzeugten Dateien validiert.
 | SHA-256-Datei mit drei validierten Einträgen | erfolgreich |
 | JSON-Prüfung von `package.json` und `package-lock.json` | erfolgreich |
 | `git diff --check` | erfolgreich |
-| GitHub Actions und Artefakt-Upload nach Electron-Aktualisierung | Korrekturlauf ausstehend |
+| GitHub Actions und Artefakt-Upload nach Electron-Aktualisierung | erfolgreich, Lauf `29527612392` |
 
 Buildumgebung des lokalen Prüflaufs: Windows 10.0.26200, Node.js 24.14.0,
 npm 10.9.8, electron-builder 26.15.3 und Electron 41.10.2. Der CI-Workflow verwendet
@@ -124,4 +124,10 @@ wurden dadurch nicht ausgeführt.
 Die Build-Skripte übergeben electron-builder nun für NSIS und Portable explizit
 `--publish never`. Damit ist ein unbeabsichtigtes GitHub-Release technisch ausgeschlossen,
 und manuelle Branch-Prüfungen benötigen kein Veröffentlichungstoken. Der vollständige lokale
-Build mit dieser Option war erfolgreich; der erneute GitHub-Actions-Lauf folgt nach dem Push.
+Build mit dieser Option war erfolgreich.
+
+Der erneute GitHub-Actions-Lauf `29527612392` auf Commit `8d55699` war anschließend
+vollständig erfolgreich. Er führte die frische Installation, alle Prüfungen, NSIS, Portable,
+ZIP und Prüfsummenerzeugung aus und lud das nicht abgelaufene Artefakt
+`PFEIL-Wochenrapport-Windows-2.1.1-x64` hoch. GitHub ordnet das Artefakt mit der ID
+`8387407137` dem geprüften Commit zu.
