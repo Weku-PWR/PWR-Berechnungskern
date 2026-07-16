@@ -10,10 +10,14 @@
     "start": "electron .",
     "test": "node scripts/generate-test-catalog.js --check && node --test test/calculation.test.js",
     "test:catalog": "node scripts/generate-test-catalog.js",
+    "catalog:check": "node scripts/generate-test-catalog.js --check",
     "syntax": "node scripts/check-syntax.js",
     "verify": "npm run syntax && npm test",
     "predist:win": "npm run verify",
-    "dist:win": "electron-builder --win nsis portable"
+    "build:nsis": "electron-builder --win nsis",
+    "build:portable": "electron-builder --win portable",
+    "package:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1",
+    "dist:win": "npm run build:nsis && npm run build:portable && npm run package:win"
   },
   "devDependencies": {
     "electron": "^37.0.0",
@@ -39,15 +43,18 @@
     "directories": { "output": "dist" },
     "win": {
       "icon": "icons/pwr.ico",
-      "target": ["nsis", "portable"],
-      "artifactName": "PFEIL-Wochenrapport-${version}-${arch}.${ext}"
+      "target": ["nsis", "portable"]
     },
     "nsis": {
+      "artifactName": "PFEIL-Wochenrapport-Setup-${version}-${arch}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "PFEIL Wochenrapport"
+    },
+    "portable": {
+      "artifactName": "PFEIL-Wochenrapport-Portable-${version}-${arch}.${ext}"
     }
   }
 }

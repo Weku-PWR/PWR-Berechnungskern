@@ -1,0 +1,51 @@
+name: Windows-Programm erstellen
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhaengigkeiten reproduzierbar installieren
+        run: npm ci
+
+      - name: Syntax pruefen
+        run: npm run syntax
+
+      - name: Tests ausfuehren
+        run: npm test
+
+      - name: Katalog pruefen
+        run: npm run catalog:check
+
+      - name: Build-Vorpruefung ausfuehren
+        run: npm run predist:win
+
+      - name: NSIS, Portable, ZIP und Pruefsummen erstellen
+        run: npm run dist:win
+
+      - name: Build-Artefakte hochladen
+        uses: actions/upload-artifact@v6
+        with:
+          name: PFEIL-Wochenrapport-Windows-2.1.1-x64
+          path: dist/release/*
+          if-no-files-found: error
+          compression-level: 0
