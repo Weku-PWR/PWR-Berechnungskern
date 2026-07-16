@@ -12,6 +12,9 @@ AP5 stellt die sichtbare Prüfoberfläche für die bestehenden 21 zentralen Modu
 - Die Zusammenfassung nennt bestandene und fehlgeschlagene Fälle. Zusätzlich werden die vorhandenen zentralen Testgruppen mit ihrem jeweiligen Ergebnis dargestellt.
 - Der optionale Filter „Nur fehlgeschlagene Fälle“ blendet bestandene Zeilen aus und zeigt bei vollständig erfolgreicher Prüfung einen verständlichen Leerzustand.
 - Alle dynamisch dargestellten Inhalte der zentralen Testfalldefinition werden vor der HTML-Ausgabe maskiert.
+- MT-008 wird anhand seiner zentral definierten Testfallart `termination` vor der Browser-Ausführung ausgesondert. Die Prüfoberfläche ruft für diesen Fall weder `calculate` auf noch erzeugt sie einen künstlichen Exit-Code oder eine Browser-Laufzeit.
+- Die Zeile MT-008 zeigt den erwarteten Status, den zuletzt bekannten automatisierten Testerfolg und den Hinweis, dass die echte Terminierungsprüfung im separaten Node-Prozess mit 1000-ms-Timeout ausschließlich über `npm test` beziehungsweise `node --test` erfolgt.
+- Gesamtstatus, Kategorien und Filter unterscheiden zwischen 20 im Browser ausgeführten Tests und einem ausschließlich automatisiert ausführbaren Robustheitstest. Es wurde keine zusätzliche Testdefinition oder Sollwertquelle eingeführt; `test/test-cases.js` bleibt maßgeblich.
 - Der Service-Worker-Cache wurde auf AP5 angehoben, damit die aktualisierte Oberfläche auch offline ausgeliefert wird.
 
 ## Verifikation
@@ -19,10 +22,12 @@ AP5 stellt die sichtbare Prüfoberfläche für die bestehenden 21 zentralen Modu
 - Testsuite: 21 ausgeführt, 21 bestanden, 0 fehlgeschlagen.
 - Syntaxprüfung: erfolgreich für 9 JavaScript-Dateien.
 - Katalogprüfung: erfolgreich; TESTKATALOG.md entspricht unverändert der zentralen Definition.
-- Sichtbare Prüfoberfläche im Browser: 21 Zeilen, Gesamtstatus 21/21, Kategorien „Modul- und Robustheitstests“ 8/8 sowie „Fachtests“ 13/13, Spalten „Sollwert“ und „Istwert“, Filter-Leerzustand bei 0 Fehlern.
+- Sichtbare Prüfoberfläche im Browser: alle 21 IDs von MT-001 bis TC-013; Gesamtstatus 20/20 Browser-Tests bestanden und 1 nur automatisiert ausführbarer Test; Kategorien „Modul- und Robustheitstests“ 7/7 im Browser plus 1 nur automatisiert sowie „Fachtests“ 13/13 im Browser.
+- MT-008: nicht im Browser ausgeführt; Status „Nur automatisiert“, erwarteter Status und letzter bekannter automatisierter Testerfolg sichtbar, eindeutiger Hinweis auf `npm test` beziehungsweise `node --test` und den separaten Node-Prozess mit 1000-ms-Timeout.
+- Filter „Nur fehlgeschlagene Fälle“: 0 fehlgeschlagene von 20 Browser-Tests, verständlicher Leerzustand und separater Hinweis auf 1 nur automatisiert ausführbaren Test.
 - Browserkonsole: keine Warnungen und keine Fehler.
 - git diff --check: ohne Befund.
-- predist:win: Die inhaltlich identische Kette aus Syntaxprüfung, Katalogprüfung und 21 Tests wurde mit der gebündelten Node-Laufzeit erfolgreich ausgeführt. Ein direkter npm-Lifecycle-Aufruf war in der Ausführungsumgebung nicht möglich, weil dort kein npm-Programm bereitgestellt ist.
+- predist:win: vollständige Lifecycle-Kette `predist:win` → `verify` → Syntaxprüfung, Katalogprüfung und 21 Node-Tests erfolgreich ausgeführt.
 
 ## Geänderte Dateien
 
