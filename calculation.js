@@ -12,8 +12,24 @@
   const minutesAllowed = [0, 15, 30, 45];
 
   const toDate = value => {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return new Date(Number.NaN);
+    }
+
     const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, month - 1, day);
+    const date = new Date(0);
+    date.setHours(0, 0, 0, 0);
+    date.setFullYear(year, month - 1, day);
+
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return new Date(Number.NaN);
+    }
+
+    return date;
   };
 
   const cloneDate = date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -107,12 +123,27 @@
   }
 
   function calculate(input) {
+    if (!input || typeof input !== 'object') {
+      return { valid: false, error: 'Die Eingabe fehlt oder ist ungültig.' };
+    }
+    if (!(input.date instanceof Date) || Number.isNaN(input.date.getTime())) {
+      return { valid: false, error: 'Das Datum fehlt oder ist kein reales Kalenderdatum.' };
+    }
+    if (!Number.isInteger(input.startHour) || input.startHour < 0 || input.startHour > 23 ||
+        !Number.isInteger(input.endHour) || input.endHour < 0 || input.endHour > 23) {
+      return { valid: false, error: 'Stunden müssen ganzzahlig zwischen 0 und 23 liegen.' };
+    }
+    if (!Number.isInteger(input.startMinute) || !Number.isInteger(input.endMinute) ||
+        !minutesAllowed.includes(input.startMinute) || !minutesAllowed.includes(input.endMinute)) {
+      return { valid: false, error: 'Es sind nur die Minuten 00, 15, 30 oder 45 zulässig.' };
+    }
+    if (typeof input.holiday !== 'boolean') {
+      return { valid: false, error: 'Die Feiertagsangabe muss ein Wahrheitswert sein.' };
+    }
+
     const start = input.startHour * 60 + input.startMinute;
     let end = input.endHour * 60 + input.endMinute;
 
-    if (!minutesAllowed.includes(input.startMinute) || !minutesAllowed.includes(input.endMinute)) {
-      return { valid: false, error: 'Es sind nur 15-Minuten-Intervalle zulässig.' };
-    }
     if (start === end) {
       return { valid: false, error: 'Beginn und Ende dürfen nicht identisch sein.' };
     }
@@ -130,6 +161,9 @@
     let cursor = start;
     while (cursor < end) {
       const boundary = nextBoundary(cursor, end, input);
+      if (!Number.isFinite(boundary) || boundary <= cursor) {
+        return { valid: false, error: 'Die Berechnung konnte nicht sicher segmentiert werden.' };
+      }
       const classification = classify(cursor, input);
       const duration = boundary - cursor;
       result.totals[classification.category] += duration;

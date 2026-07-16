@@ -1,6 +1,6 @@
 {
   "name": "pfeil-wochenrapport",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "PFEIL Wochenrapport - Berechnung und fachliche Prüfung",
   "main": "main.js",
   "author": "PFEIL Sicherung",
@@ -8,6 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
+    "test": "node --test",
     "dist:win": "electron-builder --win nsis portable"
   },
   "devDependencies": {

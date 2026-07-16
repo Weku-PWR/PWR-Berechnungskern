@@ -1,4 +1,4 @@
-# PWR Fachregelwerk – Version 1.0 (Stand 2.0.2)
+# PWR Fachregelwerk – Version 2.1.1
 
 ## Arbeitszeit
 
