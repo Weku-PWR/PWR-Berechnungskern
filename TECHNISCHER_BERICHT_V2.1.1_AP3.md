@@ -87,3 +87,10 @@ Im lokalen Browser wurden folgende Zustände geprüft:
 ## Bewertung
 
 Die Änderung beschränkt sich auf Darstellung und Steuerung der vorhandenen Eingabevalidierung. Die fachliche Berechnung und deren Regeln bleiben unverändert und werden durch die vollständig bestandenen Fachtests bestätigt.
+
+## Nachtrag: Service-Worker-Cache
+
+- Der Cache-Key wurde auf `pwr-berechnungskern-2.1.1-ap3` angehoben.
+- Beim Aktivieren des neuen Service Workers werden weiterhin alle Caches gelöscht, deren Schlüssel nicht dem aktuellen Cache-Key entspricht.
+- Dadurch erhalten bestehende Installationen die mit AP3 geänderten UI-Dateien; Fachlogik und UI-Funktion wurden nicht verändert.
+- Nach der Korrektur bestanden erneut alle 21 Tests, die Syntaxprüfung aller fünf JavaScript-Dateien und `git diff --check`.
