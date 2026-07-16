@@ -59,7 +59,7 @@ Prüflauf gegen die erzeugten Dateien validiert.
 | SHA-256-Datei mit drei validierten Einträgen | erfolgreich |
 | JSON-Prüfung von `package.json` und `package-lock.json` | erfolgreich |
 | `git diff --check` | erfolgreich |
-| GitHub Actions und Artefakt-Upload nach Electron-Aktualisierung | ausstehend bis zum Push |
+| GitHub Actions und Artefakt-Upload nach Electron-Aktualisierung | Korrekturlauf ausstehend |
 
 Buildumgebung des lokalen Prüflaufs: Windows 10.0.26200, Node.js 24.14.0,
 npm 10.9.8, electron-builder 26.15.3 und Electron 41.10.2. Der CI-Workflow verwendet
@@ -108,3 +108,20 @@ Entwicklungsstart und im vollständigen electron-builder-Lauf ohne Electron-spez
 Die Sicherheitskonfiguration in `main.js` bleibt unverändert: `sandbox: true`,
 `contextIsolation: true` und `nodeIntegration: false`. Fachlogik und UI-Dateien wurden nicht
 verändert.
+
+## CI-Korrektur für manuelle Branch-Prüfung
+
+Beim Push der Electron-41-Korrektur war PR #6 auf GitHub bereits mit dem vorherigen Commit
+`7cd1b70` gemergt. Deshalb wurde der Workflow entsprechend der Vorgabe, keinen neuen PR zu
+erstellen, manuell auf dem bestehenden Branch gestartet.
+
+Der erste manuelle Lauf `29527140938` auf Commit `397c3ff` bestand `npm ci`, Syntaxprüfung,
+21/21 Tests, Katalogprüfung und `predist:win`. Der NSIS-Installer wurde ebenfalls gebaut.
+Danach aktivierte electron-builder aufgrund der CI-Umgebung implizites Publishing und brach
+wegen des absichtlich nicht vorhandenen `GH_TOKEN` ab; Portable-Build und Artefakt-Upload
+wurden dadurch nicht ausgeführt.
+
+Die Build-Skripte übergeben electron-builder nun für NSIS und Portable explizit
+`--publish never`. Damit ist ein unbeabsichtigtes GitHub-Release technisch ausgeschlossen,
+und manuelle Branch-Prüfungen benötigen kein Veröffentlichungstoken. Der vollständige lokale
+Build mit dieser Option war erfolgreich; der erneute GitHub-Actions-Lauf folgt nach dem Push.
