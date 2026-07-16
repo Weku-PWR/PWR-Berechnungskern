@@ -70,3 +70,16 @@ Die EXE-Dateien sind nicht mit einem kommerziellen Code-Signing-Zertifikat signi
 praktische Installationstest ist ausdrücklich nicht Bestandteil dieses Arbeitspakets. Er folgt
 nach erfolgreichem Review dieses Pull Requests; erst danach soll `2.1.1-rc1` für die Anwender
 gebaut werden.
+
+## CI-Korrektur in PR #6
+
+Der erste GitHub-Actions-Lauf `29519170053` baute NSIS und Portable erfolgreich, scheiterte
+aber anschließend in der Paketierung: Das aus dem npm-Skript gestartete Windows PowerShell
+kannte das Cmdlet `Get-FileHash` nicht. Deshalb wurden die Prüfsummendatei und der
+Artefakt-Upload in diesem Lauf nicht abgeschlossen.
+
+Die SHA-256-Berechnung verwendet nun direkt `System.Security.Cryptography.SHA256` sowie
+`System.BitConverter`. Damit hängt der Paketierungsschritt nicht mehr von `Get-FileHash` ab
+und ist sowohl mit Windows PowerShell 5.1 als auch mit PowerShell 7 kompatibel. Das bestehende
+Prüfsummenformat `<64-stelliger SHA-256-Hash> *<Dateiname>` und alle Artefaktnamen bleiben
+unverändert.

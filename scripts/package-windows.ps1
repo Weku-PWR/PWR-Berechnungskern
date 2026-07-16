@@ -9,6 +9,25 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $distDirectory = Join-Path $projectRoot 'dist'
 $releaseDirectory = Join-Path $distDirectory 'release'
 
+function Get-Sha256Hex {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash($stream)
+    }
+    finally {
+        $sha256.Dispose()
+        $stream.Dispose()
+    }
+
+    return ([System.BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+}
+
 $expectedFiles = @(
     "PFEIL-Wochenrapport-Setup-$Version-$Architecture.exe",
     "PFEIL-Wochenrapport-Portable-$Version-$Architecture.exe"
@@ -38,7 +57,7 @@ Compress-Archive -LiteralPath $zipSources -DestinationPath $zipPath -Compression
 $checksumPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
 $deliveredFiles = @($expectedFiles + $zipName)
 $checksumLines = foreach ($fileName in $deliveredFiles) {
-    $hash = (Get-FileHash -LiteralPath (Join-Path $releaseDirectory $fileName) -Algorithm SHA256).Hash.ToLowerInvariant()
+    $hash = Get-Sha256Hex -Path (Join-Path $releaseDirectory $fileName)
     "$hash *$fileName"
 }
 [System.IO.File]::WriteAllLines($checksumPath, $checksumLines, [System.Text.Encoding]::ASCII)
