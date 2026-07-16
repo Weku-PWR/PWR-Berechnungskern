@@ -1,6 +1,6 @@
 const CACHE = 'pwr-berechnungskern-2.0.2';
 const ASSETS = [
-  './', './index.html', './styles.css', './app.js', './manifest.json',
+  './', './index.html', './styles.css', './calculation.js', './app.js', './manifest.json',
   './assets/pfeil-logo.jpg', './icons/icon-192.png', './icons/icon-512.png',
   './README.md', './FACHREGELWERK.md', './TESTKATALOG.md', './FEEDBACK.txt'
 ];

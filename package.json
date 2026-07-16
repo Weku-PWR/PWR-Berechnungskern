@@ -21,6 +21,7 @@
     "files": [
       "index.html",
       "styles.css",
+      "calculation.js",
       "app.js",
       "manifest.json",
       "sw.js",
