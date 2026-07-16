@@ -14,13 +14,13 @@
     "syntax": "node scripts/check-syntax.js",
     "verify": "npm run syntax && npm test",
     "predist:win": "npm run verify",
-    "build:nsis": "electron-builder --win nsis",
-    "build:portable": "electron-builder --win portable",
+    "build:nsis": "electron-builder --win nsis --publish never",
+    "build:portable": "electron-builder --win portable --publish never",
     "package:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1",
     "dist:win": "npm run build:nsis && npm run build:portable && npm run package:win"
   },
   "devDependencies": {
-    "electron": "^37.0.0",
+    "electron": "41.10.2",
     "electron-builder": "^26.0.0"
   },
   "build": {
