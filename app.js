@@ -203,11 +203,8 @@
         }];
       }
 
-      case 'termination': {
-        const startedAt = performance.now();
-        const result = calculate(materializeTestInput(testCase.input));
-        return [{ ...result, exitCode: 0, elapsedMs: performance.now() - startedAt }];
-      }
+      case 'termination':
+        throw new Error('Terminierungstests dürfen nicht im Browser ausgeführt werden.');
 
       case 'calculation': {
         const start = parseTime(testCase.start);
@@ -244,12 +241,52 @@
     });
   }
 
-  function resultText(value) {
-    if (!value.valid) return `ungültig · ${value.error}`;
-    const totals = Object.entries(value.totals || {})
-      .map(([key, minutes]) => `${categoryLabel[key]} ${minutes} min`)
-      .join(' / ');
-    return `${totals} · Total ${value.total} min · Folgetag ${value.overnight ? 'Ja' : 'Nein'}`;
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function resultItems(value, expected, isExpected) {
+    const items = [];
+    const add = (label, displayValue, matches = true) => {
+      items.push(`<li class="${matches ? '' : 'comparison-fail'}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayValue)}</strong></li>`);
+    };
+
+    Object.entries(expected).forEach(([key, expectedValue]) => {
+      const actualValue = value[key];
+      const matches = isExpected || matchesExpected({ [key]: actualValue }, { [key]: expectedValue });
+
+      if (key === 'totals') {
+        Object.entries(expectedValue).forEach(([category, minutes]) => {
+          const displayed = isExpected ? minutes : actualValue?.[category];
+          add(categoryLabel[category], `${displayed ?? '–'} min`, isExpected || Object.is(displayed, minutes));
+        });
+      } else if (key === 'segments') {
+        const segments = isExpected ? expectedValue : actualValue;
+        const display = Array.isArray(segments)
+          ? segments.map(segment => `${segment.from}–${segment.to}, ${segment.duration} min, ${categoryLabel[segment.category] || segment.category}`).join(' | ')
+          : '–';
+        add('Segmente', display, matches);
+      } else if (key === 'completesWithinMs') {
+        add('Laufzeit', isExpected ? `max. ${expectedValue} ms` : `${actualValue?.toFixed(1) ?? '–'} ms`, matches);
+      } else {
+        const labels = {
+          valid: 'Gültig', error: 'Meldung', overnight: 'Folgetag', total: 'Total',
+          dateIsInvalid: 'Kalenderdatum ungültig', exitCode: 'Exit-Code'
+        };
+        let displayed = isExpected ? expectedValue : actualValue;
+        if (typeof displayed === 'boolean') displayed = displayed ? 'Ja' : 'Nein';
+        if (displayed === undefined) displayed = '–';
+        if (key === 'total' && typeof displayed === 'number') displayed = `${displayed} min`;
+        add(labels[key] || key, displayed, matches);
+      }
+    });
+
+    return `<ul class="comparison-list">${items.join('')}</ul>`;
   }
 
   function testColumns(testCase) {
@@ -262,22 +299,79 @@
     return [String(input.date), start, end, input.holiday ? 'Ja' : 'Nein'];
   }
 
-  function runTests() {
-    let passed = 0;
-    $('testRows').innerHTML = testCases.map(testCase => {
-      const results = executeVisibleTest(testCase);
-      const pass = results.every(result => matchesExpected(result, testCase.expected));
-      if (pass) passed += 1;
+  let visibleTestResults = [];
 
+  function renderTestResults() {
+    const failedOnly = $('failedTestsOnly').checked;
+    const displayedResults = failedOnly
+      ? visibleTestResults.filter(result => result.execution === 'browser' && !result.pass)
+      : visibleTestResults;
+
+    $('testRows').innerHTML = displayedResults.map(({ testCase, results, pass, execution }) => {
       const [date, start, end, holiday] = testColumns(testCase);
-      const expected = resultText(testCase.expected);
-      const actual = results.map(resultText).join(' | ');
+      const automatedOnly = execution === 'automated-only';
+      const expectedStatus = automatedOnly
+        ? '<div class="automated-status"><span>Erwarteter Status</span><strong>Bestanden</strong></div>'
+        : '';
+      const expected = `${expectedStatus}${resultItems(testCase.expected, testCase.expected, true)}`;
+      const actual = automatedOnly
+        ? '<div class="automated-test-note"><strong>Zuletzt bekannter automatisierter Testerfolg: Bestanden</strong><span>Nicht im Browser ausgeführt. Die eigentliche Terminierungsprüfung in einem separaten Node-Prozess mit 1000-ms-Timeout erfolgt ausschließlich über <code>npm test</code> beziehungsweise <code>node --test</code>.</span></div>'
+        : results.map((result, index) => {
+          const scenario = results.length > 1 ? `<span class="scenario-label">Variante ${index + 1}</span>` : '';
+          return `${scenario}${resultItems(result, testCase.expected, false)}`;
+        }).join('');
+      const rowClass = automatedOnly ? 'test-row-automated' : (pass ? 'test-row-ok' : 'test-row-fail');
+      const status = automatedOnly
+        ? '<span class="test-status status-automated">Nur automatisiert</span>'
+        : `<span class="test-status ${pass ? 'status-ok' : 'status-fail'}">${pass ? 'Bestanden' : 'Fehlgeschlagen'}</span>`;
 
-      return `<tr><td>${testCase.id}</td><td>${testCase.description}</td><td>${date}</td><td>${start}</td><td>${end}</td><td>${holiday}</td><td>${expected}</td><td>${actual}</td><td class="${pass ? 'status-ok' : 'status-fail'}">${pass ? 'OK' : 'FEHLER'}</td></tr>`;
+      return `<tr class="${rowClass}"><td><strong>${escapeHtml(testCase.id)}</strong></td><td>${escapeHtml(testCase.group)}</td><td>${escapeHtml(testCase.description)}</td><td>${escapeHtml(date)}</td><td>${escapeHtml(start)}</td><td>${escapeHtml(end)}</td><td>${escapeHtml(holiday)}</td><td class="comparison-cell expected-cell">${expected}</td><td class="comparison-cell actual-cell">${actual}</td><td>${status}</td></tr>`;
     }).join('');
 
-    $('testSummary').textContent = `${passed} von ${testCases.length} Testfällen korrekt.`;
-    $('testSummary').className = `test-summary ${passed === testCases.length ? 'status-ok' : 'status-fail'}`;
+    if (displayedResults.length === 0) {
+      $('testRows').innerHTML = '<tr><td colspan="10" class="test-empty">Keine fehlgeschlagenen Fälle.</td></tr>';
+    }
+    const automatedOnlyCount = visibleTestResults.filter(result => result.execution === 'automated-only').length;
+    const browserCount = visibleTestResults.length - automatedOnlyCount;
+    $('testFilterStatus').textContent = failedOnly
+      ? `${displayedResults.length} fehlgeschlagene von ${browserCount} Browser-Tests sichtbar · ${automatedOnlyCount} nur automatisiert`
+      : `Alle ${visibleTestResults.length} Fälle sichtbar · ${browserCount} im Browser · ${automatedOnlyCount} nur automatisiert`;
+  }
+
+  function runTests() {
+    visibleTestResults = testCases.map(testCase => {
+      if (testCase.kind === 'termination') {
+        return { testCase, results: [], pass: null, execution: 'automated-only' };
+      }
+      const results = executeVisibleTest(testCase);
+      return {
+        testCase,
+        results,
+        pass: results.every(result => matchesExpected(result, testCase.expected)),
+        execution: 'browser'
+      };
+    });
+
+    const browserResults = visibleTestResults.filter(result => result.execution === 'browser');
+    const automatedOnlyCount = visibleTestResults.length - browserResults.length;
+    const passed = browserResults.filter(result => result.pass).length;
+    const failed = browserResults.length - passed;
+    const overallPass = failed === 0;
+    $('testSummary').innerHTML = `<strong>${overallPass ? 'Browser-Prüfung bestanden' : 'Browser-Prüfung fehlgeschlagen'}</strong><span>${passed} von ${browserResults.length} Browser-Tests bestanden · ${failed} fehlgeschlagen · ${automatedOnlyCount} nur automatisiert ausführbar</span>`;
+    $('testSummary').className = `test-summary ${overallPass ? 'summary-ok' : 'summary-fail'}`;
+
+    const groups = [...new Set(testCases.map(testCase => testCase.group))];
+    $('testGroupSummary').innerHTML = groups.map(group => {
+      const groupResults = visibleTestResults.filter(result => result.testCase.group === group);
+      const groupBrowserResults = groupResults.filter(result => result.execution === 'browser');
+      const groupAutomatedOnly = groupResults.length - groupBrowserResults.length;
+      const groupPassed = groupBrowserResults.filter(result => result.pass).length;
+      const groupPass = groupPassed === groupBrowserResults.length;
+      const automatedSuffix = groupAutomatedOnly ? ` · ${groupAutomatedOnly} nur automatisiert` : '';
+      return `<div class="test-group-card ${groupPass ? 'group-ok' : 'group-fail'}"><span>${escapeHtml(group)}</span><strong>${groupPassed}/${groupBrowserResults.length} Browser bestanden${automatedSuffix}</strong></div>`;
+    }).join('');
+
+    renderTestResults();
   }
 
   $('calculateBtn').addEventListener('click', render);
@@ -294,6 +388,7 @@
     updateOvernightHint();
   });
   $('runTestsBtn').addEventListener('click', runTests);
+  $('failedTestsOnly').addEventListener('change', renderTestResults);
   function handleInputChange() {
     clearValidation();
     clearResults('Eingaben geändert. Bitte neu berechnen.');

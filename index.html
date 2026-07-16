@@ -115,15 +115,25 @@
   <section class="panel tests-panel">
     <div class="panel-title-row">
       <h2>4. Prüffälle</h2>
-      <button id="runTestsBtn" class="primary">Alle Tests ausführen</button>
+      <button id="runTestsBtn" class="primary">Browser-Tests ausführen</button>
     </div>
+    <div class="test-controls">
+      <label class="test-filter">
+        <input id="failedTestsOnly" type="checkbox">
+        Nur fehlgeschlagene Fälle
+      </label>
+      <span id="testFilterStatus" class="test-filter-status" aria-live="polite"></span>
+    </div>
+    <div id="testSummary" class="test-summary" role="status" aria-live="polite">
+      <strong>Noch nicht ausgeführt.</strong>
+    </div>
+    <div id="testGroupSummary" class="test-group-summary" aria-label="Ergebnis nach Kategorie"></div>
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>ID</th><th>Beschreibung</th><th>Datum</th><th>Beginn</th><th>Ende</th><th>Feiertag</th><th>Erwartung</th><th>Ergebnis</th><th>Status</th></tr></thead>
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Kategorie</th><th>Beschreibung</th><th>Datum</th><th>Beginn</th><th>Ende</th><th>Feiertag</th><th>Sollwert</th><th>Istwert</th><th>Status</th></tr></thead>
         <tbody id="testRows"></tbody>
       </table>
     </div>
-    <p id="testSummary" class="test-summary">Noch nicht ausgeführt.</p>
   </section>
 
   <section class="panel feedback-panel">
