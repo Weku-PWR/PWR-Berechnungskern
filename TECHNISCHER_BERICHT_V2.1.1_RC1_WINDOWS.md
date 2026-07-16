@@ -10,6 +10,8 @@ Basis: `main` bei Merge-Commit `843120713eb1c2592b306f704871c1f4b0f9c06f` (PR #5
 
 Umgesetzt wurden ausschließlich technische Voraussetzungen für den RC1-Build:
 
+- Aktualisierung der ausgelieferten Electron-Laufzeit von 37.10.3 auf die stabile Version
+  41.10.2 als älteste derzeit noch unterstützte Hauptversion
 - `package-lock.json` für reproduzierbare Installationen mit `npm ci`
 - Windows-GitHub-Actions-Workflow mit Checkout, Node.js 22, `npm ci`, Syntaxprüfung,
   Tests, Katalogprüfung, `predist:win`, Windows-Build und Artefakt-Upload
@@ -40,11 +42,15 @@ Prüflauf gegen die erzeugten Dateien validiert.
 | Prüfung | Ergebnis |
 |---|---|
 | Basis enthält Merge-Commit aus PR #5 | erfolgreich |
-| frische Installation mit `npm ci` | erfolgreich, 320 Pakete installiert |
+| frische Installation mit `npm ci` | erfolgreich, 311 Pakete installiert |
+| `npm audit` im Installationslauf | erfolgreich, 0 bekannte Schwachstellen |
 | Syntaxprüfung | erfolgreich, 9 JavaScript-Dateien |
 | Tests | erfolgreich, 21/21 |
 | Katalogprüfung | erfolgreich |
 | `npm run predist:win` | erfolgreich |
+| Electron-Entwicklungsstart | erfolgreich, Prozess blieb aktiv, keine stderr-Ausgabe |
+| Electron-Sicherheitsoptionen | unverändert: Sandbox und Context Isolation aktiv, Node-Integration deaktiviert |
+| Kompatibilität mit electron-builder 26.15.3 | erfolgreich |
 | separater NSIS-Build | erfolgreich |
 | separater Portable-Build | erfolgreich |
 | vollständiger Ablauf `npm run dist:win` | erfolgreich |
@@ -53,18 +59,19 @@ Prüflauf gegen die erzeugten Dateien validiert.
 | SHA-256-Datei mit drei validierten Einträgen | erfolgreich |
 | JSON-Prüfung von `package.json` und `package-lock.json` | erfolgreich |
 | `git diff --check` | erfolgreich |
+| GitHub Actions und Artefakt-Upload nach Electron-Aktualisierung | ausstehend bis zum Push |
 
 Buildumgebung des lokalen Prüflaufs: Windows 10.0.26200, Node.js 24.14.0,
-npm 10.9.4, electron-builder 26.15.3 und Electron 37.10.3. Der CI-Workflow verwendet
+npm 10.9.8, electron-builder 26.15.3 und Electron 41.10.2. Der CI-Workflow verwendet
 Node.js 22, um eine stabile LTS-Laufzeit festzulegen.
 
 ## Hinweise und Abgrenzung
 
-`npm ci` meldet eine High-Severity-Audit-Warnung im aufgelösten Entwicklungsabhängigkeitsbaum
-von Electron/electron-builder. Installation, Prüfungen und Windows-Build sind dadurch nicht
-beeinträchtigt. Ein erzwungenes `npm audit fix --force` wurde nicht ausgeführt, da dies
-Abhängigkeitsversionen mit potenziell brechenden Änderungen außerhalb des RC1-Mindestumfangs
-ändern würde.
+`npm ci` meldet nach der Electron-Aktualisierung keine bekannte Schwachstelle mehr. Die
+transitiven Build-Abhängigkeiten `inflight`, `rimraf@2`, `glob@7` und `boolean` erzeugen
+Deprecation-Hinweise. Sie stammen aus dem Entwicklungsabhängigkeitsbaum von
+`electron-builder`, werden nicht als Laufzeitabhängigkeiten der Anwendung ausgeliefert und
+haben weder Installation noch Tests oder Windows-Build beeinträchtigt.
 
 Die EXE-Dateien sind nicht mit einem kommerziellen Code-Signing-Zertifikat signiert. Der
 praktische Installationstest ist ausdrücklich nicht Bestandteil dieses Arbeitspakets. Er folgt
@@ -83,3 +90,21 @@ Die SHA-256-Berechnung verwendet nun direkt `System.Security.Cryptography.SHA256
 und ist sowohl mit Windows PowerShell 5.1 als auch mit PowerShell 7 kompatibel. Das bestehende
 Prüfsummenformat `<64-stelliger SHA-256-Hash> *<Dateiname>` und alle Artefaktnamen bleiben
 unverändert.
+
+## Electron-41-Korrektur nach unabhängigem Review
+
+Das unabhängige Review von PR #6 stellte fest, dass die zuvor fixierte Electron-Version
+37.10.3 seit 13.01.2026 nicht mehr unterstützt wird. Electron wurde deshalb auf 41.10.2
+aktualisiert. Dies ist zum Prüfzeitpunkt die aktuelle stabile Patch-Version der ältesten der
+drei unterstützten Hauptversionen. Alpha-, Beta- oder Nightly-Versionen werden nicht verwendet.
+
+Die dokumentierten Änderungen der Electron-Hauptversionen 38 bis 41 wurden gegen den
+Anwendungscode geprüft. Die Anwendung verwendet weder PDF-Gast-WebContents, Renderer-Zugriff
+auf `clipboard`, `--host-rules`, `desktopCapturer`, Shared-Texture-Offscreen-Rendering noch die
+entfernten Plattform-Umgebungsvariablen. Die verwendeten APIs `BrowserWindow`,
+`webContents.setWindowOpenHandler`, `shell.openExternal` und `contextBridge` funktionieren im
+Entwicklungsstart und im vollständigen electron-builder-Lauf ohne Electron-spezifische Warnung.
+
+Die Sicherheitskonfiguration in `main.js` bleibt unverändert: `sandbox: true`,
+`contextIsolation: true` und `nodeIntegration: false`. Fachlogik und UI-Dateien wurden nicht
+verändert.

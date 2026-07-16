@@ -20,7 +20,7 @@
     "dist:win": "npm run build:nsis && npm run build:portable && npm run package:win"
   },
   "devDependencies": {
-    "electron": "^37.0.0",
+    "electron": "^41.10.2",
     "electron-builder": "^26.0.0"
   },
   "build": {
