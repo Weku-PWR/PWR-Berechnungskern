@@ -25,15 +25,16 @@
   <section class="panel input-panel">
     <h2>1. Eingabe</h2>
     <div class="grid2">
-      <label>Datum
-        <input id="dateInput" type="date">
+      <label id="dateField" class="field-label">Datum <span class="required-marker" aria-hidden="true">*</span><span class="sr-only"> (Pflichtfeld)</span>
+        <input id="dateInput" type="date" required aria-describedby="dateHelp">
+        <span id="dateHelp" class="field-help">Pflichtfeld</span>
       </label>
       <label class="checkbox-row"><input id="holidayInput" type="checkbox"> Feiertag</label>
     </div>
     <div id="weekdayDisplay" class="weekday-display">–</div>
 
     <div class="time-grid">
-      <fieldset>
+      <fieldset id="startField">
         <legend>Beginn</legend>
         <div class="time-selects">
           <select id="startHour" aria-label="Beginn Stunde"></select>
@@ -41,8 +42,8 @@
           <select id="startMinute" aria-label="Beginn Minute"></select>
         </div>
       </fieldset>
-      <fieldset>
-        <legend>Ende</legend>
+      <fieldset id="endField">
+        <legend>Ende <span id="overnightHint" class="overnight-hint" hidden>am Folgetag</span></legend>
         <div class="time-selects">
           <select id="endHour" aria-label="Ende Stunde"></select>
           <span>:</span>
@@ -70,33 +71,40 @@
       <button id="calculateBtn" class="primary">Berechnen</button>
       <button id="resetBtn">Zurücksetzen</button>
     </div>
+    <div id="errorBox" class="error-box" role="alert" aria-live="assertive" hidden></div>
   </section>
 
   <section class="panel result-panel">
     <h2>2. Ergebnis</h2>
-    <div class="result-list">
-      <div><span>Wochentag Tag 06:00–20:00</span><strong id="wtDay">0.00 h</strong></div>
-      <div><span>Wochentag Nacht 20:00–06:00</span><strong id="wtNight">0.00 h</strong></div>
-      <div class="holiday"><span>Sonn-/Feiertag Tag 06:00–20:00</span><strong id="sfDay">0.00 h</strong></div>
-      <div class="holiday"><span>Sonn-/Feiertag Nacht 20:00–06:00</span><strong id="sfNight">0.00 h</strong></div>
-      <div class="total"><span>Total</span><strong id="total">0.00 h</strong></div>
+    <p id="resultEmpty" class="empty-state">Noch keine gültige Berechnung.</p>
+    <div id="resultContent" hidden>
+      <div class="result-list">
+        <div><span>Wochentag Tag 06:00–20:00</span><strong id="wtDay"></strong></div>
+        <div><span>Wochentag Nacht 20:00–06:00</span><strong id="wtNight"></strong></div>
+        <div class="holiday"><span>Sonn-/Feiertag Tag 06:00–20:00</span><strong id="sfDay"></strong></div>
+        <div class="holiday"><span>Sonn-/Feiertag Nacht 20:00–06:00</span><strong id="sfNight"></strong></div>
+        <div class="total"><span>Total</span><strong id="total"></strong></div>
+      </div>
+      <div class="meta-list">
+        <div><span>Wochentag</span><strong id="metaWeekday"></strong></div>
+        <div><span>Feiertag</span><strong id="metaHoliday"></strong></div>
+        <div><span>Ende am Folgetag</span><strong id="metaOvernight"></strong></div>
+        <div><span>Gültig</span><strong id="metaValid"></strong></div>
+      </div>
     </div>
-    <div class="meta-list">
-      <div><span>Wochentag</span><strong id="metaWeekday">–</strong></div>
-      <div><span>Feiertag</span><strong id="metaHoliday">Nein</strong></div>
-      <div><span>Über Mitternacht</span><strong id="metaOvernight">Nein</strong></div>
-      <div><span>Gültig</span><strong id="metaValid">–</strong></div>
-    </div>
-    <div id="errorBox" class="error-box" hidden></div>
   </section>
 
   <section class="panel detail-panel">
     <h2>3. Rechenweg</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Von</th><th>Bis</th><th>Dauer</th><th>Kategorie</th><th>Begründung</th></tr></thead>
-        <caption><button id="toggleDetails" class="btn secondary" type="button">Berechnung anzeigen / ausblenden</button></caption><tbody id="detailRows"><tr><td colspan="5" class="muted">Noch keine Berechnung.</td></tr></tbody>
-      </table>
+    <p id="detailEmpty" class="empty-state">Der Rechenweg erscheint nach einer gültigen Berechnung.</p>
+    <div id="detailContent" hidden>
+      <div class="detail-actions"><button id="toggleDetails" class="btn secondary" type="button" aria-expanded="true">Rechenweg ausblenden</button></div>
+      <div id="detailTableWrap" class="table-wrap">
+        <table>
+          <thead><tr><th>Von</th><th>Bis</th><th>Dauer</th><th>Kategorie</th><th>Begründung</th></tr></thead>
+          <tbody id="detailRows"></tbody>
+        </table>
+      </div>
     </div>
     <div class="explain-box">
       <strong>Hinweis</strong>

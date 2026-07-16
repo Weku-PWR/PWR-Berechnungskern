@@ -26,12 +26,16 @@
   fillSelect($('endHour'), [...Array(24).keys()], 18);
   fillSelect($('startMinute'), minutesAllowed, 0);
   fillSelect($('endMinute'), minutesAllowed, 0);
-  $('dateInput').value = new Date().toISOString().slice(0, 10);
 
   const fmtHours = minutes => `${(minutes / 60).toFixed(2)} h`;
 
   function updateWeekday() {
     const date = toDate($('dateInput').value);
+    if (Number.isNaN(date.getTime())) {
+      $('weekdayDisplay').textContent = 'Bitte Datum auswählen';
+      $('weekdayDisplay').classList.remove('weekend');
+      return;
+    }
     const day = date.getDay();
     $('weekdayDisplay').textContent = `${shortWeekdays[day]} · ${weekdays[day]}`;
     $('weekdayDisplay').classList.toggle('weekend', day === 0 || day === 6);
@@ -48,25 +52,114 @@
     };
   }
 
+  const fieldControls = {
+    date: ['dateInput'],
+    start: ['startHour', 'startMinute'],
+    end: ['endHour', 'endMinute']
+  };
+  const fieldGroups = { date: 'dateField', start: 'startField', end: 'endField' };
+  const resultIds = ['wtDay', 'wtNight', 'sfDay', 'sfNight', 'total', 'metaWeekday', 'metaHoliday', 'metaOvernight', 'metaValid'];
+
+  function clearValidation() {
+    $('errorBox').hidden = true;
+    $('errorBox').textContent = '';
+    Object.keys(fieldGroups).forEach(key => {
+      $(fieldGroups[key]).classList.remove('field-invalid');
+      fieldControls[key].forEach(id => $(id).removeAttribute('aria-invalid'));
+    });
+  }
+
+  function clearResults(message = 'Noch keine gültige Berechnung.') {
+    resultIds.forEach(id => { $(id).textContent = ''; });
+    $('metaWeekday').style.color = '';
+    $('metaValid').style.color = '';
+    $('detailRows').innerHTML = '';
+    $('resultContent').hidden = true;
+    $('resultEmpty').hidden = false;
+    $('resultEmpty').textContent = message;
+    $('detailContent').hidden = true;
+    $('detailEmpty').hidden = false;
+    $('detailEmpty').textContent = message === 'Noch keine gültige Berechnung.'
+      ? 'Der Rechenweg erscheint nach einer gültigen Berechnung.'
+      : message;
+    $('detailTableWrap').hidden = false;
+    $('toggleDetails').textContent = 'Rechenweg ausblenden';
+    $('toggleDetails').setAttribute('aria-expanded', 'true');
+  }
+
+  function showError(message, fields = []) {
+    clearResults('Keine Berechnung wegen ungültiger Eingabe.');
+    $('errorBox').textContent = message;
+    $('errorBox').hidden = false;
+    fields.forEach(key => {
+      $(fieldGroups[key]).classList.add('field-invalid');
+      fieldControls[key].forEach(id => $(id).setAttribute('aria-invalid', 'true'));
+    });
+    if (fields.length) $(fieldControls[fields[0]][0]).focus();
+  }
+
+  function updateOvernightHint() {
+    const start = Number($('startHour').value) * 60 + Number($('startMinute').value);
+    const end = Number($('endHour').value) * 60 + Number($('endMinute').value);
+    $('overnightHint').hidden = !Number.isFinite(start) || !Number.isFinite(end) || end >= start;
+  }
+
+  function validateInput() {
+    const dateValue = $('dateInput').value;
+    if (!dateValue) return { message: 'Bitte wählen Sie ein Datum aus.', fields: ['date'] };
+    if (Number.isNaN(toDate(dateValue).getTime())) {
+      return { message: 'Bitte geben Sie ein gültiges Kalenderdatum ein.', fields: ['date'] };
+    }
+
+    const startHour = Number($('startHour').value);
+    const startMinute = Number($('startMinute').value);
+    const endHour = Number($('endHour').value);
+    const endMinute = Number($('endMinute').value);
+    if (!Number.isInteger(startHour) || startHour < 0 || startHour > 23) {
+      return { message: 'Bitte wählen Sie für den Beginn eine Stunde zwischen 00 und 23.', fields: ['start'] };
+    }
+    if (!minutesAllowed.includes(startMinute)) {
+      return { message: 'Bitte wählen Sie für den Beginn 00, 15, 30 oder 45 Minuten.', fields: ['start'] };
+    }
+    if (!Number.isInteger(endHour) || endHour < 0 || endHour > 23) {
+      return { message: 'Bitte wählen Sie für das Ende eine Stunde zwischen 00 und 23.', fields: ['end'] };
+    }
+    if (!minutesAllowed.includes(endMinute)) {
+      return { message: 'Bitte wählen Sie für das Ende 00, 15, 30 oder 45 Minuten.', fields: ['end'] };
+    }
+    if (startHour === endHour && startMinute === endMinute) {
+      return { message: 'Beginn und Ende sind gleich. Bitte wählen Sie unterschiedliche Uhrzeiten.', fields: ['start', 'end'] };
+    }
+    return null;
+  }
+
   function render() {
+    clearValidation();
+    clearResults();
+    const validationError = validateInput();
+    if (validationError) {
+      showError(validationError.message, validationError.fields);
+      return;
+    }
+
     const input = currentInput();
     const result = calculate(input);
-    const day = input.date.getDay();
+    if (!result.valid) {
+      showError(`Die Eingaben konnten nicht berechnet werden: ${result.error}`);
+      return;
+    }
 
+    const day = input.date.getDay();
+    $('resultEmpty').hidden = true;
+    $('resultContent').hidden = false;
+    $('detailEmpty').hidden = true;
+    $('detailContent').hidden = false;
     $('metaWeekday').textContent = weekdays[day];
     $('metaWeekday').style.color = day === 0 || day === 6 ? '#c62828' : '';
     $('metaHoliday').textContent = input.holiday ? 'Ja' : 'Nein';
-    $('metaOvernight').textContent = result.valid && result.overnight ? 'Ja' : 'Nein';
-    $('metaValid').textContent = result.valid ? 'Ja' : 'Nein';
-    $('metaValid').style.color = result.valid ? '#16734a' : '#c62828';
-    $('errorBox').hidden = result.valid;
-
-    if (!result.valid) {
-      $('errorBox').textContent = result.error;
-      ['wtDay', 'wtNight', 'sfDay', 'sfNight', 'total'].forEach(id => $(id).textContent = '0.00 h');
-      $('detailRows').innerHTML = '<tr><td colspan="5" class="muted">Ungültige Eingabe.</td></tr>';
-      return;
-    }
+    $('metaOvernight').textContent = result.overnight ? 'Ja' : 'Nein';
+    $('metaValid').textContent = 'Ja';
+    $('metaValid').style.color = '#16734a';
 
     $('wtDay').textContent = fmtHours(result.totals.wtDay);
     $('wtNight').textContent = fmtHours(result.totals.wtNight);
@@ -143,12 +236,22 @@
     fillSelect($('endHour'), [...Array(24).keys()], 18);
     fillSelect($('startMinute'), minutesAllowed, 0);
     fillSelect($('endMinute'), minutesAllowed, 0);
+    $('dateInput').value = '';
     $('holidayInput').checked = false;
-    render();
+    clearValidation();
+    clearResults();
+    updateWeekday();
+    updateOvernightHint();
   });
   $('runTestsBtn').addEventListener('click', runTests);
-  $('dateInput').addEventListener('change', () => { updateWeekday(); render(); });
-  ['holidayInput', 'startHour', 'startMinute', 'endHour', 'endMinute'].forEach(id => $(id).addEventListener('change', render));
+  function handleInputChange() {
+    clearValidation();
+    clearResults('Eingaben geändert. Bitte neu berechnen.');
+    updateWeekday();
+    updateOvernightHint();
+  }
+  ['dateInput', 'holidayInput', 'startHour', 'startMinute', 'endHour', 'endMinute']
+    .forEach(id => $(id).addEventListener('change', handleInputChange));
 
   function status() {
     const badge = $('onlineBadge');
@@ -158,21 +261,17 @@
   window.addEventListener('offline', status);
 
   updateWeekday();
-  render();
+  updateOvernightHint();
+  clearResults();
   runTests();
   status();
 
-  const detailRowsElement = document.getElementById('detailRows');
-  const detailTable = detailRowsElement ? detailRowsElement.closest('table') : null;
-  const toggleDetailsButton = document.getElementById('toggleDetails');
-  if (toggleDetailsButton && detailTable) {
-    toggleDetailsButton.addEventListener('click', () => {
-      const hidden = detailTable.dataset.collapsed === 'true';
-      detailTable.dataset.collapsed = hidden ? 'false' : 'true';
-      detailTable.style.display = hidden ? '' : 'none';
-      toggleDetailsButton.textContent = hidden ? 'Berechnung ausblenden' : 'Berechnung anzeigen';
-    });
-  }
+  $('toggleDetails').addEventListener('click', () => {
+    const willHide = !$('detailTableWrap').hidden;
+    $('detailTableWrap').hidden = willHide;
+    $('toggleDetails').textContent = willHide ? 'Rechenweg anzeigen' : 'Rechenweg ausblenden';
+    $('toggleDetails').setAttribute('aria-expanded', String(!willHide));
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
