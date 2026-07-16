@@ -59,6 +59,7 @@
     end: ['endHour', 'endMinute']
   };
   const fieldGroups = { date: 'dateField', start: 'startField', end: 'endField' };
+  const fieldErrors = { date: 'dateError', start: 'startError', end: 'endError' };
   const resultIds = ['wtDay', 'wtNight', 'sfDay', 'sfNight', 'total', 'metaWeekday', 'metaHoliday', 'metaOvernight', 'metaValid'];
 
   function clearValidation() {
@@ -66,8 +67,16 @@
     $('errorBox').textContent = '';
     Object.keys(fieldGroups).forEach(key => {
       $(fieldGroups[key]).classList.remove('field-invalid');
+      $(fieldErrors[key]).hidden = true;
+      $(fieldErrors[key]).textContent = '';
       fieldControls[key].forEach(id => $(id).removeAttribute('aria-invalid'));
     });
+  }
+
+  function setDetailsExpanded(expanded) {
+    $('detailTableWrap').hidden = !expanded;
+    $('toggleDetails').textContent = expanded ? 'Rechenweg ausblenden' : 'Rechenweg anzeigen';
+    $('toggleDetails').setAttribute('aria-expanded', String(expanded));
   }
 
   function clearResults(message = 'Noch keine gültige Berechnung.') {
@@ -83,17 +92,18 @@
     $('detailEmpty').textContent = message === 'Noch keine gültige Berechnung.'
       ? 'Der Rechenweg erscheint nach einer gültigen Berechnung.'
       : message;
-    $('detailTableWrap').hidden = false;
-    $('toggleDetails').textContent = 'Rechenweg ausblenden';
-    $('toggleDetails').setAttribute('aria-expanded', 'true');
+    $('toggleDetails').disabled = true;
+    setDetailsExpanded(false);
   }
 
-  function showError(message, fields = []) {
+  function showError(message, fields = [], messages = {}) {
     clearResults('Keine Berechnung wegen ungültiger Eingabe.');
     $('errorBox').textContent = message;
     $('errorBox').hidden = false;
     fields.forEach(key => {
       $(fieldGroups[key]).classList.add('field-invalid');
+      $(fieldErrors[key]).textContent = messages[key] || message;
+      $(fieldErrors[key]).hidden = false;
       fieldControls[key].forEach(id => $(id).setAttribute('aria-invalid', 'true'));
     });
     if (fields.length) $(fieldControls[fields[0]][0]).focus();
@@ -107,9 +117,19 @@
 
   function validateInput() {
     const dateValue = $('dateInput').value;
-    if (!dateValue) return { message: 'Bitte wählen Sie ein Datum aus.', fields: ['date'] };
+    if (!dateValue) {
+      return {
+        message: 'Bitte korrigieren Sie das markierte Pflichtfeld.',
+        fields: ['date'],
+        messages: { date: 'Datum fehlt. Bitte wählen Sie ein Datum aus.' }
+      };
+    }
     if (Number.isNaN(toDate(dateValue).getTime())) {
-      return { message: 'Bitte geben Sie ein gültiges Kalenderdatum ein.', fields: ['date'] };
+      return {
+        message: 'Bitte korrigieren Sie das markierte Feld.',
+        fields: ['date'],
+        messages: { date: 'Das Datum ist ungültig. Bitte wählen Sie ein gültiges Kalenderdatum aus.' }
+      };
     }
 
     const startHour = Number($('startHour').value);
@@ -117,19 +137,26 @@
     const endHour = Number($('endHour').value);
     const endMinute = Number($('endMinute').value);
     if (!Number.isInteger(startHour) || startHour < 0 || startHour > 23) {
-      return { message: 'Bitte wählen Sie für den Beginn eine Stunde zwischen 00 und 23.', fields: ['start'] };
+      return { message: 'Bitte korrigieren Sie den Beginn.', fields: ['start'], messages: { start: 'Beginn: Bitte wählen Sie eine Stunde zwischen 00 und 23.' } };
     }
     if (!minutesAllowed.includes(startMinute)) {
-      return { message: 'Bitte wählen Sie für den Beginn 00, 15, 30 oder 45 Minuten.', fields: ['start'] };
+      return { message: 'Bitte korrigieren Sie den Beginn.', fields: ['start'], messages: { start: 'Beginn: Bitte wählen Sie 00, 15, 30 oder 45 Minuten.' } };
     }
     if (!Number.isInteger(endHour) || endHour < 0 || endHour > 23) {
-      return { message: 'Bitte wählen Sie für das Ende eine Stunde zwischen 00 und 23.', fields: ['end'] };
+      return { message: 'Bitte korrigieren Sie das Ende.', fields: ['end'], messages: { end: 'Ende: Bitte wählen Sie eine Stunde zwischen 00 und 23.' } };
     }
     if (!minutesAllowed.includes(endMinute)) {
-      return { message: 'Bitte wählen Sie für das Ende 00, 15, 30 oder 45 Minuten.', fields: ['end'] };
+      return { message: 'Bitte korrigieren Sie das Ende.', fields: ['end'], messages: { end: 'Ende: Bitte wählen Sie 00, 15, 30 oder 45 Minuten.' } };
     }
     if (startHour === endHour && startMinute === endMinute) {
-      return { message: 'Beginn und Ende sind gleich. Bitte wählen Sie unterschiedliche Uhrzeiten.', fields: ['start', 'end'] };
+      return {
+        message: 'Beginn und Ende sind gleich. Bitte korrigieren Sie die markierten Felder.',
+        fields: ['start', 'end'],
+        messages: {
+          start: 'Beginn muss sich vom Ende unterscheiden.',
+          end: 'Ende muss sich vom Beginn unterscheiden.'
+        }
+      };
     }
     return null;
   }
@@ -139,7 +166,7 @@
     clearResults();
     const validationError = validateInput();
     if (validationError) {
-      showError(validationError.message, validationError.fields);
+      showError(validationError.message, validationError.fields, validationError.messages);
       return;
     }
 
@@ -155,6 +182,8 @@
     $('resultContent').hidden = false;
     $('detailEmpty').hidden = true;
     $('detailContent').hidden = false;
+    $('toggleDetails').disabled = false;
+    setDetailsExpanded(true);
     $('metaWeekday').textContent = weekdays[day];
     $('metaWeekday').style.color = day === 0 || day === 6 ? '#c62828' : '';
     $('metaHoliday').textContent = input.holiday ? 'Ja' : 'Nein';
@@ -412,10 +441,7 @@
   status();
 
   $('toggleDetails').addEventListener('click', () => {
-    const willHide = !$('detailTableWrap').hidden;
-    $('detailTableWrap').hidden = willHide;
-    $('toggleDetails').textContent = willHide ? 'Rechenweg anzeigen' : 'Rechenweg ausblenden';
-    $('toggleDetails').setAttribute('aria-expanded', String(!willHide));
+    setDetailsExpanded($('detailTableWrap').hidden);
   });
 
   if ('serviceWorker' in navigator) {
