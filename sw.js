@@ -1,4 +1,4 @@
-const CACHE = 'pwr-berechnungskern-2.1.1';
+const CACHE = 'pwr-berechnungskern-2.1.1-ap3';
 const ASSETS = [
   './', './index.html', './styles.css', './calculation.js', './app.js', './manifest.json',
   './assets/pfeil-logo.jpg', './icons/icon-192.png', './icons/icon-512.png',
